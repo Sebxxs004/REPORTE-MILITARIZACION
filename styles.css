@@ -239,7 +239,7 @@ body {
 /* KPI Cards Grid */
 .kpi-grid {
   display: grid;
-  grid-template-columns: 1.4fr repeat(4, 1fr);
+  grid-template-columns: 1.3fr 1.2fr 1fr 1fr;
   gap: 16px;
   align-items: stretch;
 }
