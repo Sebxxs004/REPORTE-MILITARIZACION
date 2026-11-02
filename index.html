@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fiscalía General de la Nación - Tablero de Analítica de Noticias Criminales</title>
+  <title>Fiscalía General de la Nación - Tablero de Analítica Integral</title>
   <link rel="stylesheet" href="./styles.css">
   <!-- Chart.js and XLSX local libraries for offline high reliability -->
   <script src="./chart.umd.min.js"></script>
   <script src="./xlsx.full.min.js"></script>
-  <!-- Pre-compiled Dataset -->
+  <!-- Pre-compiled Datasets -->
   <script src="./data.js"></script>
 </head>
 <body>
@@ -20,22 +20,28 @@
         <img src="./logo.webp" alt="Fiscalía General de la Nación de Colombia" class="gov-logo-img" onerror="this.src='./Fiscalía_General_de_la_Nación_(Colombia)_logo.svg.webp'">
         <div class="gov-titles">
           <span class="gov-subtitle">República de Colombia • Fiscalía General de la Nación</span>
-          <h1 class="gov-main-title">Tablero de Analítica: Noticias Criminales Creadas</h1>
-          <span class="gov-section-info">Dirección Seccional Norte de Santander • Monitoreo Militarización</span>
+          <h1 class="gov-main-title" id="mainHeaderTitle">Tablero de Analítica: Noticias Criminales Creadas</h1>
+          <span class="gov-section-info">Dirección Seccional Norte de Santander • Monitoreo Integral</span>
         </div>
       </div>
+
+      <!-- Module Switcher Tabs -->
+      <nav class="gov-module-nav">
+        <button class="nav-module-btn active" id="btnTabNoticias">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Módulo 1: Noticias Criminales
+        </button>
+        <button class="nav-module-btn" id="btnTabUri">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Módulo 2: Casos Ingreso URI
+        </button>
+      </nav>
 
       <div class="gov-header-actions">
         <div class="gov-badge-live">
           <span class="live-pulse"></span>
-          Consolidado SPOA
+          Consolidado SPOA / URI
         </div>
-
-        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;">
-        <button class="btn-header btn-header-outline" onclick="document.getElementById('excelFileInput').click();" title="Cargar un nuevo archivo Excel de Noticias Creadas">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Actualizar Excel
-        </button>
 
         <button class="btn-header btn-header-outline" id="btnExportCSV" title="Descargar datos en formato CSV compatible con Excel">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -53,272 +59,545 @@
   <!-- Main Dashboard Wrapper -->
   <main class="dashboard-wrapper">
 
-    <!-- Official Informational Ribbon -->
-    <section class="gov-ribbon">
-      <div class="gov-ribbon-text">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-        <span id="ribbonSummary">Cargando datos del informe oficial...</span>
-      </div>
-      <div class="gov-ribbon-stats">
-        <span><strong>Fuente:</strong> SPOA - Sistema Penal Oral Acusatorio</span>
-        <span>•</span>
-        <span><strong>Rango Registro:</strong> 29 Oct 2026 – 02 Nov 2026</span>
-      </div>
-    </section>
+    <!-- ========================================== -->
+    <!-- MÓDULO 1: NOTICIAS CRIMINALES MILITARIZACIÓN -->
+    <!-- ========================================== -->
+    <div id="moduleNoticias" class="dashboard-module active">
 
-    <!-- KPI Metric Cards Grid -->
-    <section class="kpi-grid">
-      <!-- Distintivo Primary Metric Card -->
-      <div class="kpi-card kpi-card-distintivo">
-        <div class="kpi-top-row">
-          <span class="kpi-seal-pill">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-            Métrica Principal
-          </span>
-          <div class="kpi-icon kpi-icon-gold">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <!-- Official Informational Ribbon -->
+      <section class="gov-ribbon">
+        <div class="gov-ribbon-text">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span id="ribbonSummary">Cargando datos del informe oficial...</span>
+        </div>
+        <div class="gov-ribbon-stats">
+          <span><strong>Fuente:</strong> Noticias creadas militarizacion.xlsx</span>
+          <span>•</span>
+          <span><strong>Rango Registro:</strong> 29 Oct 2026 – 02 Nov 2026</span>
+        </div>
+      </section>
+
+      <!-- KPI Metric Cards Grid (4 Cards) -->
+      <section class="kpi-grid">
+        <!-- Distintivo Primary Metric Card -->
+        <div class="kpi-card kpi-card-distintivo">
+          <div class="kpi-top-row">
+            <span class="kpi-seal-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Métrica Principal
+            </span>
+            <div class="kpi-icon kpi-icon-gold">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+          </div>
+          <div class="kpi-title">Total Noticias Creadas (Únicas)</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiTotalDistintivo">0</span>
+          </div>
+          <div class="kpi-subtext">Noticias criminales únicas radicadas en SPOA</div>
+        </div>
+
+        <!-- KPI 2: Delito con Mayor Número de Noticias (Dinámica) -->
+        <div class="kpi-card" style="border-left: 4px solid var(--accent-gold);">
+          <div class="kpi-top-row">
+            <div class="kpi-title">Delito con Mayor N° de Noticias</div>
+            <div class="kpi-icon" style="background-color: var(--accent-gold-light); color: var(--warning);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+            <span class="kpi-value" id="kpiTopDelitoCount" style="font-size: 1.8rem; color: #b45309;">0</span>
+            <span id="kpiTopDelitoName" style="font-size: 0.82rem; font-weight: 700; color: #0b2545; line-height: 1.25; min-height: 34px;">-</span>
+          </div>
+          <div class="kpi-subtext">Mayor incidencia según filtro aplicado</div>
+        </div>
+
+        <!-- KPI 3: Municipios -->
+        <div class="kpi-card">
+          <div class="kpi-top-row">
+            <div class="kpi-title">Municipios con Hechos</div>
+            <div class="kpi-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiMunicipios">0</span>
+          </div>
+          <div class="kpi-subtext">Cobertura territorial de los hechos</div>
+        </div>
+
+        <!-- KPI 4: Promedio Diario -->
+        <div class="kpi-card">
+          <div class="kpi-top-row">
+            <div class="kpi-title">Promedio Diario Creación</div>
+            <div class="kpi-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiPromedioDiario">0</span>
+          </div>
+          <div class="kpi-subtext">Noticias por jornada operativa</div>
+        </div>
+      </section>
+
+      <!-- Interactive Filter Console -->
+      <section class="filter-card">
+        <div class="filter-header">
+          <div class="filter-heading">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span>Filtros Dinámicos de Noticias</span>
+          </div>
+          <div class="filter-buttons">
+            <button class="btn-reset" id="btnResetFilters">Restablecer Filtros</button>
           </div>
         </div>
-        <div class="kpi-title">Total Noticias Creadas (Únicas)</div>
-        <div class="kpi-value-row">
-          <span class="kpi-value" id="kpiTotalDistintivo">0</span>
-        </div>
-        <div class="kpi-subtext">Noticias criminales únicas radicadas en SPOA</div>
-      </div>
 
-      <!-- KPI 2: Delito con Mayor Número de Noticias (Dinámica) -->
-      <div class="kpi-card" style="border-left: 4px solid var(--accent-gold);">
-        <div class="kpi-top-row">
-          <div class="kpi-title">Delito con Mayor N° de Noticias</div>
-          <div class="kpi-icon" style="background-color: var(--accent-gold-light); color: var(--warning);">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <div class="filter-controls-grid">
+          <div class="form-group">
+            <label class="form-label" for="filterMunicipio">Municipio de los Hechos</label>
+            <select class="form-select" id="filterMunicipio">
+              <option value="ALL">Todos los Municipios</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterTipo">Tipo de Noticia</label>
+            <select class="form-select" id="filterTipo">
+              <option value="ALL">Todos los Tipos de Noticia</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterFechaInicio">Fecha Creación Desde</label>
+            <input type="date" class="form-input" id="filterFechaInicio">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterFechaFin">Fecha Creación Hasta</label>
+            <input type="date" class="form-input" id="filterFechaFin">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterDelitoInput">Buscar Delito</label>
+            <input type="text" class="form-input" id="filterDelitoInput" placeholder="Ej: Falsedad, Hurto, Estafa...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="countModeSelect">Modo de Conteo</label>
+            <select class="form-select" id="countModeSelect">
+              <option value="DISTINCT" selected>Noticias Únicas (SPOA)</option>
+              <option value="TOTAL">Total Conductas / Delitos</option>
+            </select>
           </div>
         </div>
-        <div class="kpi-value-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-          <span class="kpi-value" id="kpiTopDelitoCount" style="font-size: 1.8rem; color: #b45309;">0</span>
-          <span id="kpiTopDelitoName" style="font-size: 0.82rem; font-weight: 700; color: #0b2545; line-height: 1.25; min-height: 34px;">-</span>
-        </div>
-        <div class="kpi-subtext">Mayor incidencia según filtro aplicado</div>
-      </div>
 
-
-
-      <!-- KPI 4: Municipios -->
-      <div class="kpi-card">
-        <div class="kpi-top-row">
-          <div class="kpi-title">Municipios con Hechos</div>
-          <div class="kpi-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-          </div>
-        </div>
-        <div class="kpi-value-row">
-          <span class="kpi-value" id="kpiMunicipios">0</span>
-        </div>
-        <div class="kpi-subtext">Cobertura territorial de los hechos</div>
-      </div>
-
-      <!-- KPI 5: Promedio Diario -->
-      <div class="kpi-card">
-        <div class="kpi-top-row">
-          <div class="kpi-title">Promedio Diario Creación</div>
-          <div class="kpi-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
-          </div>
-        </div>
-        <div class="kpi-value-row">
-          <span class="kpi-value" id="kpiPromedioDiario">0</span>
-        </div>
-        <div class="kpi-subtext">Noticias por jornada operativa</div>
-      </div>
-    </section>
-
-    <!-- Interactive Filter Console -->
-    <section class="filter-card">
-      <div class="filter-header">
-        <div class="filter-heading">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          <span>Filtros Dinámicos Institucionales</span>
-        </div>
-        <div class="filter-buttons">
-          <button class="btn-reset" id="btnResetFilters">Restablecer Filtros</button>
-        </div>
-      </div>
-
-      <div class="filter-controls-grid">
-        <!-- Filter 1: Municipio de los Hechos (UPDATED) -->
-        <div class="form-group">
-          <label class="form-label" for="filterMunicipio">Municipio de los Hechos</label>
-          <select class="form-select" id="filterMunicipio">
-            <option value="ALL">Todos los Municipios</option>
-          </select>
-        </div>
-
-        <!-- Filter 2: Tipo de Noticia -->
-        <div class="form-group">
-          <label class="form-label" for="filterTipo">Tipo de Noticia</label>
-          <select class="form-select" id="filterTipo">
-            <option value="ALL">Todos los Tipos de Noticia</option>
-          </select>
-        </div>
-
-        <!-- Filter 3: Fecha Inicio -->
-        <div class="form-group">
-          <label class="form-label" for="filterFechaInicio">Fecha Creación Desde</label>
-          <input type="date" class="form-input" id="filterFechaInicio">
-        </div>
-
-        <!-- Filter 4: Fecha Fin -->
-        <div class="form-group">
-          <label class="form-label" for="filterFechaFin">Fecha Creación Hasta</label>
-          <input type="date" class="form-input" id="filterFechaFin">
-        </div>
-
-        <!-- Filter 5: Count Mode -->
-        <div class="form-group">
-          <label class="form-label" for="countModeSelect">Modo de Conteo</label>
-          <select class="form-select" id="countModeSelect">
-            <option value="DISTINCT" selected>Noticias Únicas (SPOA)</option>
-            <option value="TOTAL">Total Conductas / Delitos</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Active Filters Summary Row -->
-      <div class="active-filters-row" id="activeFiltersContainer">
-        <!-- Rendered dynamically -->
-      </div>
-    </section>
-
-    <!-- Main Visualizations Grid -->
-    <section class="charts-grid">
-      <!-- Chart 1: Line Chart (Creación de Noticias por Día) -->
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <div class="chart-titles">
-            <h2 class="chart-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              Evolución Temporal: Creación de Noticias por Día
-            </h2>
-            <span class="chart-subtitle">Volumen diario de noticias según fechas registradas en el formato</span>
-          </div>
-        </div>
-        <div class="chart-container-box">
-          <canvas id="lineChartCreacion"></canvas>
-        </div>
-      </div>
-
-      <!-- Chart 2: Bar Chart (Distribución de Noticias Creadas por Delito) -->
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <div class="chart-titles">
-            <h2 class="chart-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              Distribución de Noticias Creadas por Delito
-            </h2>
-            <span class="chart-subtitle">Delitos tipificados con mayor número de noticias</span>
-          </div>
-        </div>
-        <div class="chart-container-box">
-          <canvas id="barChartNoticias"></canvas>
-        </div>
-      </div>
-    </section>
-
-    <!-- Secondary Visualizations Grid -->
-    <section class="secondary-analytics-grid">
-      <!-- Donut Chart: Tipo de Noticia -->
-      <div class="chart-card">
-        <div class="chart-card-header">
-          <div class="chart-titles">
-            <h2 class="chart-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10h-10z"/></svg>
-              Composición Porcentual: Tipo de Noticia
-            </h2>
-            <span class="chart-subtitle">Participación proporcional de denuncias, querellas y actos urgentes</span>
-          </div>
-        </div>
-        <div class="chart-container-box" style="height: 280px;">
-          <canvas id="donutChartTipo"></canvas>
-        </div>
-      </div>
-
-      <!-- Institutional Quick Highlights Card -->
-      <div class="chart-card" style="justify-content: flex-start; gap: 14px;">
-        <div class="chart-card-header">
-          <div class="chart-titles">
-            <h2 class="chart-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              Resumen Operativo y Jurisdiccional
-            </h2>
-            <span class="chart-subtitle">Puntos clave del reporte consolidado</span>
-          </div>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem; color: #334155;">
-          <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #0b2545;">
-            <strong style="color: #0b2545;">Pico de Mayor Radicación:</strong>
-            El 29 de octubre de 2026 registró el mayor volumen con <strong>209 noticias únicas</strong> creadas (360 registros totales).
-          </div>
-          <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #c59b27;">
-            <strong style="color: #0b2545;">Concentración Territorial:</strong>
-            El departamento de <strong>Norte de Santander</strong> concentra más del 97% de los hechos registrados, liderado por la ciudad de <strong>Cúcuta</strong> y el área metropolitana (Villa del Rosario, Los Patios).
-          </div>
-          <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #134074;">
-            <strong style="color: #0b2545;">Tipología Predominante:</strong>
-            La modalidad más frecuente de inicio es la <strong>Denuncia</strong> (42.5%), seguida de la <strong>Querella</strong> (34.7%) y los <strong>Actos Urgentes</strong> (17.2%).
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Detailed Interactive Data Table -->
-    <section class="table-card">
-      <div class="table-header-controls">
-        <div class="chart-titles">
-          <h2 class="chart-title">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            Registro Detallado de Noticias Criminales
-          </h2>
-          <span class="chart-subtitle" id="tableCountInfo">Mostrando noticias filtradas</span>
-        </div>
-
-        <div class="table-search-box">
-          <span class="search-icon-inside">🔍</span>
-          <input type="text" class="form-input" id="tableSearchInput" placeholder="Buscar por SPOA, Delito, Municipio...">
-        </div>
-      </div>
-
-      <div class="table-scroll-container">
-        <table class="gov-table">
-          <thead>
-            <tr>
-              <th>N° Noticia Criminal (SPOA)</th>
-              <th>Fecha Creación</th>
-              <th>Tipo Noticia</th>
-              <th>Departamento</th>
-              <th>Municipio</th>
-              <th>Delito(s)</th>
-              <th>Estado</th>
-              <th style="text-align: right;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tableNoticiasBody">
-            <!-- Table rows populated dynamically -->
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination Controls -->
-      <div class="pagination-bar">
-        <span>Visualizando 20 registros por página</span>
-        <div class="pagination-controls" id="paginationControls">
+        <div class="active-filters-row" id="activeFiltersContainer">
           <!-- Populated dynamically -->
         </div>
-      </div>
-    </section>
+      </section>
+
+      <!-- Visualizations Grid -->
+      <section class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-titles">
+              <h2 class="chart-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Evolución Temporal: Creación de Noticias por Día
+              </h2>
+              <span class="chart-subtitle">Volumen diario de noticias según fechas registradas en el formato</span>
+            </div>
+          </div>
+          <div class="chart-container-box">
+            <canvas id="lineChartCreacion"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-titles">
+              <h2 class="chart-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Distribución de Noticias Creadas por Delito
+              </h2>
+              <span class="chart-subtitle">Delitos tipificados con mayor número de noticias</span>
+            </div>
+            <div>
+              <input type="text" id="barDelitoSearch" class="form-input" style="padding: 5px 10px; font-size: 0.78rem; width: 170px;" placeholder="Buscar delito...">
+            </div>
+          </div>
+          <div class="chart-container-box">
+            <canvas id="barChartNoticias"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Secondary Visualizations Grid -->
+      <section class="secondary-analytics-grid">
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-titles">
+              <h2 class="chart-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10h-10z"/></svg>
+                Composición Porcentual: Tipo de Noticia
+              </h2>
+              <span class="chart-subtitle">Participación proporcional de denuncias, querellas y actos urgentes</span>
+            </div>
+          </div>
+          <div class="chart-container-box" style="height: 280px;">
+            <canvas id="donutChartTipo"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card" style="justify-content: flex-start; gap: 14px;">
+          <div class="chart-card-header">
+            <div class="chart-titles">
+              <h2 class="chart-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Resumen Operativo y Jurisdiccional
+              </h2>
+              <span class="chart-subtitle">Puntos clave del reporte consolidado</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem; color: #334155;">
+            <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #0b2545;">
+              <strong style="color: #0b2545;">Pico de Mayor Radicación:</strong>
+              El 29 de octubre de 2026 registró el mayor volumen con <strong>209 noticias únicas</strong> creadas.
+            </div>
+            <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #c59b27;">
+              <strong style="color: #0b2545;">Concentración Territorial:</strong>
+              El departamento de <strong>Norte de Santander</strong> concentra más del 97% de los hechos registrados, liderado por la ciudad de <strong>Cúcuta</strong> y área metropolitana.
+            </div>
+            <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #134074;">
+              <strong style="color: #0b2545;">Tipología Predominante:</strong>
+              La modalidad más frecuente de inicio es la <strong>Denuncia</strong> (42.5%), seguida de la <strong>Querella</strong> (34.7%) y los <strong>Actos Urgentes</strong> (17.2%).
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Detailed Interactive Data Table -->
+      <section class="table-card">
+        <div class="table-header-controls">
+          <div class="chart-titles">
+            <h2 class="chart-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Registro Detallado de Noticias Criminales
+            </h2>
+            <span class="chart-subtitle" id="tableCountInfo">Mostrando noticias filtradas</span>
+          </div>
+
+          <div class="table-search-box">
+            <span class="search-icon-inside">🔍</span>
+            <input type="text" class="form-input" id="tableSearchInput" placeholder="Buscar por SPOA, Delito, Municipio...">
+          </div>
+        </div>
+
+        <div class="table-scroll-container">
+          <table class="gov-table">
+            <thead>
+              <tr>
+                <th>N° Noticia Criminal (SPOA)</th>
+                <th>Fecha Creación</th>
+                <th>Tipo Noticia</th>
+                <th>Departamento</th>
+                <th>Municipio</th>
+                <th>Delito(s)</th>
+                <th>Estado</th>
+                <th style="text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tableNoticiasBody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar">
+          <span>Visualizando 20 registros por página</span>
+          <div class="pagination-controls" id="paginationControls">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MÓDULO 2: CONTROL INGRESOS CASOS URI       -->
+    <!-- ========================================== -->
+    <div id="moduleUri" class="dashboard-module">
+
+      <!-- URI Ribbon -->
+      <section class="gov-ribbon">
+        <div class="gov-ribbon-text">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span id="ribbonUriSummary">Consolidado de Casos Ingresados con Detenido a la Unidad de Reacción Inmediata (URI)</span>
+        </div>
+        <div class="gov-ribbon-stats">
+          <span><strong>Fuente:</strong> 4. CONTROL INGRESOS CASOS URI</span>
+          <span>•</span>
+          <span><strong>Total Judicializados:</strong> 45 Procesados</span>
+        </div>
+      </section>
+
+      <!-- URI KPI Cards Grid (4 Cards) -->
+      <section class="kpi-grid">
+        <!-- Distintivo URI Card -->
+        <div class="kpi-card kpi-card-distintivo">
+          <div class="kpi-top-row">
+            <span class="kpi-seal-pill">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              URI Control
+            </span>
+            <div class="kpi-icon kpi-icon-gold">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+          </div>
+          <div class="kpi-title">Total Procesados</div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiUriTotalProcesados">45</span>
+          </div>
+          <div class="kpi-subtext">Ciudadanos judicializados ingresados a URI</div>
+        </div>
+
+        <!-- KPI 2 URI: Delito Líder -->
+        <div class="kpi-card" style="border-left: 4px solid var(--accent-gold);">
+          <div class="kpi-top-row">
+            <div class="kpi-title">Delito Mayor Incidencia (URI)</div>
+            <div class="kpi-icon" style="background-color: var(--accent-gold-light); color: var(--warning);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+            <span class="kpi-value" id="kpiUriTopDelitoCount" style="font-size: 1.8rem; color: #b45309;">18 casos</span>
+            <span id="kpiUriTopDelitoName" style="font-size: 0.82rem; font-weight: 700; color: #0b2545; line-height: 1.25; min-height: 34px;">TRAFICO DE ESTUPEFACIENTES</span>
+          </div>
+          <div class="kpi-subtext">Representa el 40.0% de los ingresos URI</div>
+        </div>
+
+        <!-- KPI 3 URI: Capturas Flagrancia -->
+        <div class="kpi-card">
+          <div class="kpi-top-row">
+            <div class="kpi-title">Capturas en Flagrancia</div>
+            <div class="kpi-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiUriFlagrancias">29</span>
+          </div>
+          <div class="kpi-subtext">Capturas inmediatas en flagrancia</div>
+        </div>
+
+        <!-- KPI 4 URI: Medidas Carcelarias -->
+        <div class="kpi-card">
+          <div class="kpi-top-row">
+            <div class="kpi-title">Medidas Carcelarias (Juez)</div>
+            <div class="kpi-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-value" id="kpiUriCarcelarias">5</span>
+          </div>
+          <div class="kpi-subtext">Aseguramiento en centro carcelario</div>
+        </div>
+      </section>
+
+      <!-- URI Filter Console -->
+      <section class="filter-card">
+        <div class="filter-header">
+          <div class="filter-heading">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <span>Filtros Dinámicos del Módulo URI</span>
+          </div>
+          <div class="filter-buttons">
+            <button class="btn-reset" id="btnResetUriFilters">Restablecer Filtros</button>
+          </div>
+        </div>
+
+        <div class="filter-controls-grid">
+          <div class="form-group">
+            <label class="form-label" for="filterUriDelito">Delito Imputado (Selector)</label>
+            <select class="form-select" id="filterUriDelito">
+              <option value="ALL">Todos los Delitos</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterUriDelitoInput">Buscar Delito (Texto)</label>
+            <input type="text" class="form-input" id="filterUriDelitoInput" placeholder="Ej: Estupefacientes, Armas, Hurto...">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterUriTipoCaptura">Tipo de Captura</label>
+            <select class="form-select" id="filterUriTipoCaptura">
+              <option value="ALL">Todos los Tipos de Captura</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterUriMedida">Imposición de Medida</label>
+            <select class="form-select" id="filterUriMedida">
+              <option value="ALL">Todas las Medidas</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="filterUriImputacion">Formulación de Imputación</label>
+            <select class="form-select" id="filterUriImputacion">
+              <option value="ALL">Todas las Situaciones</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="active-filters-row" id="activeUriFiltersContainer">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- URI Charts: Row 1 (Timeline & Delitos) -->
+      <section class="charts-grid">
+        <!-- Chart 1: Línea del tiempo por fechas de captura -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-titles">
+              <h2 class="chart-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Línea del Tiempo: Capturas por Fecha
+              </h2>
+              <span class="chart-subtitle">Evolución diaria de personas capturadas e ingresadas a la URI</span>
+            </div>
+          </div>
+          <div class="chart-container-box">
+            <canvas id="lineChartUriCaptura"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Delitos, cuántos por cada delito -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-titles">
+              <h2 class="chart-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Delitos: Conteo de Procesados por Cada Delito
+              </h2>
+              <span class="chart-subtitle">Volumen de judicializados desglosado por conducta punible</span>
+            </div>
+            <div>
+              <input type="text" id="barUriDelitoSearch" class="form-input" style="padding: 5px 10px; font-size: 0.78rem; width: 170px;" placeholder="Buscar delito...">
+            </div>
+          </div>
+          <div class="chart-container-box">
+            <canvas id="barChartUriDelitos"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- URI Charts: Row 2 (Tipo Captura, Imposición Medida, Formulación Imputación) -->
+      <section class="charts-grid-tri">
+        <!-- Chart 3: Gráfica de barra por tipos de captura -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-titles">
+              <h2 class="chart-title" style="font-size: 0.92rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+                Tipos de Captura
+              </h2>
+              <span class="chart-subtitle">Modalidad operativa de aprehensión</span>
+            </div>
+          </div>
+          <div class="chart-container-box" style="height: 290px;">
+            <canvas id="barChartUriTipoCaptura"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 4: Gráfica de barras por imposición de medida -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-titles">
+              <h2 class="chart-title" style="font-size: 0.92rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                Imposición de Medida
+              </h2>
+              <span class="chart-subtitle">Decisión judicial / Libertad de Fiscalía</span>
+            </div>
+          </div>
+          <div class="chart-container-box" style="height: 290px;">
+            <canvas id="barChartUriMedida"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 5: Gráfica de barras por formulación de imputación -->
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <div class="chart-titles">
+              <h2 class="chart-title" style="font-size: 0.92rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Formulación de Imputación
+              </h2>
+              <span class="chart-subtitle">Allanamiento a cargos y estado procesal</span>
+            </div>
+          </div>
+          <div class="chart-container-box" style="height: 290px;">
+            <canvas id="barChartUriImputacion"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- URI Table: Detailed Processed Persons -->
+      <section class="table-card">
+        <div class="table-header-controls">
+          <div class="chart-titles">
+            <h2 class="chart-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              Control Detallado de Ingresos URI y Procesados
+            </h2>
+            <span class="chart-subtitle" id="tableUriCountInfo">Mostrando casos filtrados</span>
+          </div>
+
+          <div class="table-search-box">
+            <span class="search-icon-inside">🔍</span>
+            <input type="text" class="form-input" id="tableUriSearchInput" placeholder="Buscar por Nombre, Cédula, Delito, SPOA...">
+          </div>
+        </div>
+
+        <div class="table-scroll-container">
+          <table class="gov-table">
+            <thead>
+              <tr>
+                <th>N°</th>
+                <th>Fecha / Hora Captura</th>
+                <th>Nombre del Procesado</th>
+                <th>Documento</th>
+                <th>Delito Imputado</th>
+                <th>Tipo Captura</th>
+                <th>Medida Impuesta</th>
+                <th>Imputación</th>
+                <th>Fiscal / Despacho</th>
+              </tr>
+            </thead>
+            <tbody id="tableUriBody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar">
+          <span>Visualizando 20 registros por página</span>
+          <div class="pagination-controls" id="paginationUriControls">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </section>
+
+    </div>
 
   </main>
 
-  <!-- Technical Notice Detail Modal -->
+  <!-- Technical Notice Detail Modal (Módulo 1) -->
   <div class="modal-overlay" id="detailModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -409,10 +688,10 @@
     <div class="gov-footer-content">
       <div>
         <strong>Fiscalía General de la Nación de Colombia</strong><br>
-        Sistema Penal Oral Acusatorio (SPOA) • Monitoreo Analítico Institucional
+        Sistema Penal Oral Acusatorio (SPOA) • Unidad de Reacción Inmediata (URI)
       </div>
       <div>
-        Reporte generado con base en <em>Noticias creadas militarizacion.xlsx</em>
+        Monitoreo Operativo Integrado • Dirección Seccional Norte de Santander
       </div>
     </div>
   </footer>

@@ -1,30 +1,59 @@
 // Tablero de Analítica Institucional - Fiscalía General de la Nación
-// Monitoreo de Noticias Criminales - Militarización
+// Monitoreo Integral: Noticias Criminales (SPOA) y Control de Ingresos Casos URI
 
 (function() {
   'use strict';
 
-  // Global State
-  let rawRecords = [];
+  // Global Active Module ('noticias' or 'uri')
+  let currentModule = 'noticias';
+
+  // ==========================================
+  // MODULE 1 STATE: NOTICIAS CRIMINALES
+  // ==========================================
+  let rawNoticias = [];
   let uniqueNoticias = [];
-  
-  let state = {
+  let noticiasState = {
     municipio: 'ALL',
     tipoNoticia: 'ALL',
     fechaInicio: '',
     fechaFin: '',
-    countMode: 'DISTINCT', // 'DISTINCT' (Noticias Únicas) or 'TOTAL' (Total Hechos)
+    countMode: 'DISTINCT',
+    searchQuery: '',
+    delitoQuery: '',
+    barDelitoQuery: '',
+    page: 1,
+    pageSize: 20
+  };
+
+  let chartNoticiasLine = null;
+  let chartNoticiasBar = null;
+  let chartNoticiasDonut = null;
+
+  // ==========================================
+  // MODULE 2 STATE: CASOS INGRESO URI
+  // ==========================================
+  let rawUriCases = [];
+  let uriState = {
+    delito: 'ALL',
+    delitoQuery: '',
+    barDelitoQuery: '',
+    tipoCaptura: 'ALL',
+    medida: 'ALL',
+    imputacion: 'ALL',
     searchQuery: '',
     page: 1,
     pageSize: 20
   };
 
-  // Chart instances
-  let lineChartInstance = null;
-  let barChartInstance = null;
-  let donutChartInstance = null;
+  let chartUriTimeline = null;
+  let chartUriDelitos = null;
+  let chartUriTipoCaptura = null;
+  let chartUriMedida = null;
+  let chartUriImputacion = null;
 
-  // Custom Chart.js Plugin to draw value labels directly on bars & line points
+  // ==========================================
+  // GLOBAL CHART.JS DATALABELS PLUGIN
+  // ==========================================
   const datalabelsPlugin = {
     id: 'datalabelsPlugin',
     afterDatasetsDraw(chart) {
@@ -67,159 +96,64 @@
     Chart.register(datalabelsPlugin);
   }
 
-  // Initialize
+  // ==========================================
+  // INITIALIZATION
+  // ==========================================
   document.addEventListener('DOMContentLoaded', () => {
-    loadDataset();
-    setupEventListeners();
+    initDatasets();
+    setupNavigation();
+    setupNoticiasListeners();
+    setupUriListeners();
+    updateNoticiasDashboard();
+    updateUriDashboard();
   });
 
-  function loadDataset() {
-    if (window.DATASET && window.DATASET.registros) {
-      rawRecords = window.DATASET.registros;
-      uniqueNoticias = window.DATASET.noticias_unicas;
-      initDateRange();
-      populateFilterOptions();
-      updateDashboard();
-    } else {
-      console.warn('Dataset precompilado no encontrado.');
+  function initDatasets() {
+    // 1. Noticias dataset
+    if (window.DATASET_NOTICIAS && window.DATASET_NOTICIAS.registros) {
+      rawNoticias = window.DATASET_NOTICIAS.registros;
+      uniqueNoticias = window.DATASET_NOTICIAS.noticias_unicas;
+      initNoticiasDateRange();
+      populateNoticiasFilters();
+    }
+
+    // 2. URI dataset
+    if (window.DATASET_URI && window.DATASET_URI.casos) {
+      rawUriCases = window.DATASET_URI.casos;
+      populateUriFilters();
     }
   }
 
-  function initDateRange() {
-    const dates = rawRecords.map(r => r.fecha_dia).filter(Boolean).sort();
-    if (dates.length > 0) {
-      state.fechaInicio = dates[0];
-      state.fechaFin = dates[dates.length - 1];
+  // ==========================================
+  // NAVIGATION BETWEEN MODULES
+  // ==========================================
+  function setupNavigation() {
+    const btnNoticias = document.getElementById('btnTabNoticias');
+    const btnUri = document.getElementById('btnTabUri');
 
-      const inputInicio = document.getElementById('filterFechaInicio');
-      const inputFin = document.getElementById('filterFechaFin');
-      if (inputInicio) inputInicio.value = state.fechaInicio;
-      if (inputFin) inputFin.value = state.fechaFin;
+    if (btnNoticias) {
+      btnNoticias.addEventListener('click', () => switchModule('noticias'));
     }
-  }
-
-  function populateFilterOptions() {
-    // Populate Municipios de los Hechos (Reemplaza Departamento)
-    const muniSelect = document.getElementById('filterMunicipio');
-    if (muniSelect) {
-      const munis = [...new Set(rawRecords.map(r => r.municipio_hechos).filter(Boolean))].sort();
-      muniSelect.innerHTML = '<option value="ALL">Todos los Municipios</option>';
-      munis.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        muniSelect.appendChild(opt);
-      });
+    if (btnUri) {
+      btnUri.addEventListener('click', () => switchModule('uri'));
     }
 
-    // Populate Tipos de Noticia
-    const tipoSelect = document.getElementById('filterTipo');
-    if (tipoSelect) {
-      const tipos = [...new Set(rawRecords.map(r => r.tipo_noticia).filter(Boolean))].sort();
-      tipoSelect.innerHTML = '<option value="ALL">Todos los Tipos de Noticia</option>';
-      tipos.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
-        tipoSelect.appendChild(opt);
-      });
-    }
-  }
-
-  function setupEventListeners() {
-    // Filter Municipio
-    const muniSelect = document.getElementById('filterMunicipio');
-    if (muniSelect) {
-      muniSelect.addEventListener('change', (e) => {
-        state.municipio = e.target.value;
-        state.page = 1;
-        updateDashboard();
-      });
-    }
-
-    // Filter Tipos
-    const tipoSelect = document.getElementById('filterTipo');
-    if (tipoSelect) {
-      tipoSelect.addEventListener('change', (e) => {
-        state.tipoNoticia = e.target.value;
-        state.page = 1;
-        updateDashboard();
-      });
-    }
-
-    // Date filters
-    const inputInicio = document.getElementById('filterFechaInicio');
-    if (inputInicio) {
-      inputInicio.addEventListener('change', (e) => {
-        state.fechaInicio = e.target.value;
-        state.page = 1;
-        updateDashboard();
-      });
-    }
-
-    const inputFin = document.getElementById('filterFechaFin');
-    if (inputFin) {
-      inputFin.addEventListener('change', (e) => {
-        state.fechaFin = e.target.value;
-        state.page = 1;
-        updateDashboard();
-      });
-    }
-
-    // Count mode toggle
-    const countToggle = document.getElementById('countModeSelect');
-    if (countToggle) {
-      countToggle.addEventListener('change', (e) => {
-        state.countMode = e.target.value;
-        updateDashboard();
-      });
-    }
-
-    // Search query in table
-    const searchInput = document.getElementById('tableSearchInput');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        state.searchQuery = e.target.value.toLowerCase().trim();
-        state.page = 1;
-        renderTable();
-      });
-    }
-
-    // Reset Filters button
-    const btnReset = document.getElementById('btnResetFilters');
-    if (btnReset) {
-      btnReset.addEventListener('click', () => {
-        state.municipio = 'ALL';
-        state.tipoNoticia = 'ALL';
-        state.searchQuery = '';
-        state.page = 1;
-        initDateRange();
-        if (muniSelect) muniSelect.value = 'ALL';
-        if (tipoSelect) tipoSelect.value = 'ALL';
-        if (searchInput) searchInput.value = '';
-        updateDashboard();
-      });
-    }
-
-    // Excel upload handler
-    const fileInput = document.getElementById('excelFileInput');
-    if (fileInput) {
-      fileInput.addEventListener('change', handleExcelUpload);
-    }
-
-    // Export CSV
+    // Export CSV handles active module
     const btnExportCSV = document.getElementById('btnExportCSV');
     if (btnExportCSV) {
-      btnExportCSV.addEventListener('click', exportToCSV);
+      btnExportCSV.addEventListener('click', () => {
+        if (currentModule === 'noticias') exportNoticiasCSV();
+        else exportUriCSV();
+      });
     }
 
-    // Print Report
+    // Print
     const btnPrint = document.getElementById('btnPrintReport');
     if (btnPrint) {
       btnPrint.addEventListener('click', () => window.print());
     }
 
-    // Modal close
+    // Modal
     const modalClose = document.getElementById('modalCloseBtn');
     const modalOverlay = document.getElementById('detailModal');
     if (modalClose && modalOverlay) {
@@ -230,28 +164,182 @@
     }
   }
 
-  // Filter evaluation logic
-  function getFilteredRecords() {
-    return rawRecords.filter(r => {
-      if (state.municipio !== 'ALL' && r.municipio_hechos !== state.municipio) {
-        return false;
-      }
-      if (state.tipoNoticia !== 'ALL' && r.tipo_noticia !== state.tipoNoticia) {
-        return false;
-      }
-      if (state.fechaInicio && r.fecha_dia < state.fechaInicio) {
-        return false;
-      }
-      if (state.fechaFin && r.fecha_dia > state.fechaFin) {
-        return false;
-      }
+  function switchModule(moduleName) {
+    currentModule = moduleName;
+
+    const modNoticias = document.getElementById('moduleNoticias');
+    const modUri = document.getElementById('moduleUri');
+    const btnNoticias = document.getElementById('btnTabNoticias');
+    const btnUri = document.getElementById('btnTabUri');
+    const titleEl = document.getElementById('mainHeaderTitle');
+
+    if (moduleName === 'noticias') {
+      modNoticias.classList.add('active');
+      modUri.classList.remove('active');
+      btnNoticias.classList.add('active');
+      btnUri.classList.remove('active');
+      if (titleEl) titleEl.textContent = 'Tablero de Analítica: Noticias Criminales Creadas';
+      updateNoticiasDashboard();
+    } else {
+      modNoticias.classList.remove('active');
+      modUri.classList.add('active');
+      btnNoticias.classList.remove('active');
+      btnUri.classList.add('active');
+      if (titleEl) titleEl.textContent = 'Tablero de Analítica: Control de Ingresos Casos URI';
+      updateUriDashboard();
+    }
+  }
+  window.switchModule = switchModule;
+
+  // ==========================================
+  // MÓDULO 1: NOTICIAS LOGIC
+  // ==========================================
+  function initNoticiasDateRange() {
+    const dates = rawNoticias.map(r => r.fecha_dia).filter(Boolean).sort();
+    if (dates.length > 0) {
+      noticiasState.fechaInicio = dates[0];
+      noticiasState.fechaFin = dates[dates.length - 1];
+
+      const inputInicio = document.getElementById('filterFechaInicio');
+      const inputFin = document.getElementById('filterFechaFin');
+      if (inputInicio) inputInicio.value = noticiasState.fechaInicio;
+      if (inputFin) inputFin.value = noticiasState.fechaFin;
+    }
+  }
+
+  function populateNoticiasFilters() {
+    const muniSelect = document.getElementById('filterMunicipio');
+    if (muniSelect) {
+      const munis = [...new Set(rawNoticias.map(r => r.municipio_hechos).filter(Boolean))].sort();
+      muniSelect.innerHTML = '<option value="ALL">Todos los Municipios</option>';
+      munis.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        muniSelect.appendChild(opt);
+      });
+    }
+
+    const tipoSelect = document.getElementById('filterTipo');
+    if (tipoSelect) {
+      const tipos = [...new Set(rawNoticias.map(r => r.tipo_noticia).filter(Boolean))].sort();
+      tipoSelect.innerHTML = '<option value="ALL">Todos los Tipos de Noticia</option>';
+      tipos.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        tipoSelect.appendChild(opt);
+      });
+    }
+  }
+
+  function setupNoticiasListeners() {
+    const muniSelect = document.getElementById('filterMunicipio');
+    if (muniSelect) {
+      muniSelect.addEventListener('change', (e) => {
+        noticiasState.municipio = e.target.value;
+        noticiasState.page = 1;
+        updateNoticiasDashboard();
+      });
+    }
+
+    const tipoSelect = document.getElementById('filterTipo');
+    if (tipoSelect) {
+      tipoSelect.addEventListener('change', (e) => {
+        noticiasState.tipoNoticia = e.target.value;
+        noticiasState.page = 1;
+        updateNoticiasDashboard();
+      });
+    }
+
+    const inputInicio = document.getElementById('filterFechaInicio');
+    if (inputInicio) {
+      inputInicio.addEventListener('change', (e) => {
+        noticiasState.fechaInicio = e.target.value;
+        noticiasState.page = 1;
+        updateNoticiasDashboard();
+      });
+    }
+
+    const inputFin = document.getElementById('filterFechaFin');
+    if (inputFin) {
+      inputFin.addEventListener('change', (e) => {
+        noticiasState.fechaFin = e.target.value;
+        noticiasState.page = 1;
+        updateNoticiasDashboard();
+      });
+    }
+
+    const countToggle = document.getElementById('countModeSelect');
+    if (countToggle) {
+      countToggle.addEventListener('change', (e) => {
+        noticiasState.countMode = e.target.value;
+        updateNoticiasDashboard();
+      });
+    }
+
+    // Delito text filter
+    const delitoInput = document.getElementById('filterDelitoInput');
+    if (delitoInput) {
+      delitoInput.addEventListener('input', (e) => {
+        noticiasState.delitoQuery = e.target.value.toLowerCase().trim();
+        noticiasState.page = 1;
+        updateNoticiasDashboard();
+      });
+    }
+
+    // Delito bar chart live search
+    const barDelitoInput = document.getElementById('barDelitoSearch');
+    if (barDelitoInput) {
+      barDelitoInput.addEventListener('input', (e) => {
+        noticiasState.barDelitoQuery = e.target.value.toLowerCase().trim();
+        renderNoticiasBarChart(getFilteredNoticias());
+      });
+    }
+
+    const searchInput = document.getElementById('tableSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        noticiasState.searchQuery = e.target.value.toLowerCase().trim();
+        noticiasState.page = 1;
+        renderNoticiasTable();
+      });
+    }
+
+    const btnReset = document.getElementById('btnResetFilters');
+    if (btnReset) {
+      btnReset.addEventListener('click', () => {
+        noticiasState.municipio = 'ALL';
+        noticiasState.tipoNoticia = 'ALL';
+        noticiasState.delitoQuery = '';
+        noticiasState.barDelitoQuery = '';
+        noticiasState.searchQuery = '';
+        noticiasState.page = 1;
+        initNoticiasDateRange();
+        if (muniSelect) muniSelect.value = 'ALL';
+        if (tipoSelect) tipoSelect.value = 'ALL';
+        if (delitoInput) delitoInput.value = '';
+        if (barDelitoInput) barDelitoInput.value = '';
+        if (searchInput) searchInput.value = '';
+        updateNoticiasDashboard();
+      });
+    }
+  }
+
+  function getFilteredNoticias() {
+    return rawNoticias.filter(r => {
+      if (noticiasState.municipio !== 'ALL' && r.municipio_hechos !== noticiasState.municipio) return false;
+      if (noticiasState.tipoNoticia !== 'ALL' && r.tipo_noticia !== noticiasState.tipoNoticia) return false;
+      if (noticiasState.fechaInicio && r.fecha_dia < noticiasState.fechaInicio) return false;
+      if (noticiasState.fechaFin && r.fecha_dia > noticiasState.fechaFin) return false;
+      if (noticiasState.delitoQuery && (!r.delito || !r.delito.toLowerCase().includes(noticiasState.delitoQuery))) return false;
       return true;
     });
   }
 
-  function getFilteredDistinctNoticias(filteredRecords) {
+  function getDistinctFilteredNoticias(records) {
     const map = new Map();
-    filteredRecords.forEach(r => {
+    records.forEach(r => {
       if (!map.has(r.id)) {
         map.set(r.id, {
           id: r.id,
@@ -265,54 +353,35 @@
           municipio_hechos: r.municipio_hechos,
           direccion: r.direccion,
           delito_principal: r.delito,
-          delito_agrupado: r.delito_agrupado,
           delitos: [r.delito],
-          unidad_receptora: r.unidad_receptora,
           despacho: r.despacho,
           receptor: r.receptor,
           total_delitos: 1
         });
       } else {
         const item = map.get(r.id);
-        if (!item.delitos.includes(r.delito)) {
-          item.delitos.push(r.delito);
-        }
+        if (!item.delitos.includes(r.delito)) item.delitos.push(r.delito);
         item.total_delitos++;
       }
     });
     return Array.from(map.values());
   }
 
-  // Master Dashboard Updater
-  function updateDashboard() {
-    const filteredRecords = getFilteredRecords();
-    const filteredNoticias = getFilteredDistinctNoticias(filteredRecords);
+  function updateNoticiasDashboard() {
+    const filteredRecords = getFilteredNoticias();
+    const filteredDistinct = getDistinctFilteredNoticias(filteredRecords);
 
-    renderKPIs(filteredRecords, filteredNoticias);
-    renderActiveFilterBadges(filteredRecords, filteredNoticias);
-    renderLineChart(filteredRecords, filteredNoticias);
-    renderBarChart(filteredRecords, filteredNoticias);
-    renderDonutChart(filteredRecords, filteredNoticias);
-    renderTable(filteredRecords, filteredNoticias);
-  }
-
-  // Render KPIs
-  function renderKPIs(filteredRecords, filteredNoticias) {
-    const totalDistintivo = filteredNoticias.length;
+    // KPIs
+    const totalDistintivo = filteredDistinct.length;
     const totalRegistros = filteredRecords.length;
 
-    // Distinct Noticias (Distintivo!)
     const kpiDistintivoEl = document.getElementById('kpiTotalDistintivo');
-    if (kpiDistintivoEl) {
-      kpiDistintivoEl.textContent = totalDistintivo.toLocaleString('es-CO');
-    }
+    if (kpiDistintivoEl) kpiDistintivoEl.textContent = totalDistintivo.toLocaleString('es-CO');
 
-    // DELITO CON MAYOR NÚMERO DE NOTICIAS (Depende dinámicamente de los filtros)
+    // Delito Mayor Incidencia
     const delitoCounts = {};
     filteredRecords.forEach(r => {
-      if (r.delito) {
-        delitoCounts[r.delito] = (delitoCounts[r.delito] || 0) + 1;
-      }
+      if (r.delito) delitoCounts[r.delito] = (delitoCounts[r.delito] || 0) + 1;
     });
 
     let topDelitoName = 'SIN DATO';
@@ -337,113 +406,76 @@
       }
     }
 
-    // Total Records
-    const kpiTotalEl = document.getElementById('kpiTotalRegistros');
-    if (kpiTotalEl) {
-      kpiTotalEl.textContent = totalRegistros.toLocaleString('es-CO');
-    }
-
-    // Unique Municipios
+    // Municipios
     const uniqueMunis = new Set(filteredRecords.map(r => r.municipio_hechos).filter(Boolean));
     const kpiMunisEl = document.getElementById('kpiMunicipios');
-    if (kpiMunisEl) {
-      kpiMunisEl.textContent = uniqueMunis.size;
-    }
+    if (kpiMunisEl) kpiMunisEl.textContent = uniqueMunis.size;
 
     // Daily Average
     const uniqueDays = new Set(filteredRecords.map(r => r.fecha_dia).filter(Boolean));
     const avgDaily = uniqueDays.size > 0 ? (totalDistintivo / uniqueDays.size).toFixed(1) : 0;
     const kpiAvgEl = document.getElementById('kpiPromedioDiario');
-    if (kpiAvgEl) {
-      kpiAvgEl.textContent = avgDaily;
-    }
+    if (kpiAvgEl) kpiAvgEl.textContent = avgDaily;
 
-    // Ribbon subtitle
     const ribbonText = document.getElementById('ribbonSummary');
-    if (ribbonText) {
-      ribbonText.innerHTML = `Mostrando <strong>${totalDistintivo}</strong> noticias únicas y <strong>${totalRegistros}</strong> hechos punibles tipificados.`;
-    }
-  }
+    if (ribbonText) ribbonText.innerHTML = `Mostrando <strong>${totalDistintivo}</strong> noticias únicas y <strong>${totalRegistros}</strong> hechos punibles tipificados.`;
 
-  // Active filters badges
-  function renderActiveFilterBadges(filteredRecords, filteredNoticias) {
+    // Active filters
     const container = document.getElementById('activeFiltersContainer');
-    if (!container) return;
-
-    const badges = [];
-    if (state.municipio !== 'ALL') {
-      badges.push(`<span>Municipio: <strong>${state.municipio}</strong></span>`);
-    }
-    if (state.tipoNoticia !== 'ALL') {
-      badges.push(`<span>Tipo: <strong>${state.tipoNoticia}</strong></span>`);
-    }
-    if (state.fechaInicio && state.fechaFin) {
-      badges.push(`<span>Fechas: <strong>${state.fechaInicio}</strong> a <strong>${state.fechaFin}</strong></span>`);
-    }
-    badges.push(`<span>Modo: <strong>${state.countMode === 'DISTINCT' ? 'Noticias Únicas' : 'Total Hechos'}</strong></span>`);
-
-    if (badges.length > 0) {
+    if (container) {
+      const badges = [];
+      if (noticiasState.municipio !== 'ALL') badges.push(`<span>Municipio: <strong>${noticiasState.municipio}</strong></span>`);
+      if (noticiasState.tipoNoticia !== 'ALL') badges.push(`<span>Tipo: <strong>${noticiasState.tipoNoticia}</strong></span>`);
+      if (noticiasState.fechaInicio && noticiasState.fechaFin) badges.push(`<span>Fechas: <strong>${noticiasState.fechaInicio}</strong> a <strong>${noticiasState.fechaFin}</strong></span>`);
+      badges.push(`<span>Modo: <strong>${noticiasState.countMode === 'DISTINCT' ? 'Noticias Únicas' : 'Total Hechos'}</strong></span>`);
       container.innerHTML = badges.map(b => `<div class="active-filter-pill">${b}</div>`).join('');
-    } else {
-      container.innerHTML = '<span style="font-size: 0.75rem; color: #94a3b8;">Sin filtros específicos aplicados (Consolidado general)</span>';
     }
+
+    renderNoticiasLineChart(filteredRecords, filteredDistinct);
+    renderNoticiasBarChart(filteredRecords);
+    renderNoticiasDonutChart(filteredRecords, filteredDistinct);
+    renderNoticiasTable(filteredRecords, filteredDistinct);
   }
 
-  // Render Line Chart (Creación de Noticias por Día en el formato)
-  function renderLineChart(records, noticias) {
+  function renderNoticiasLineChart(records, noticias) {
     const ctx = document.getElementById('lineChartCreacion');
     if (!ctx) return;
 
-    records = records || getFilteredRecords();
-    noticias = noticias || getFilteredDistinctNoticias(records);
-
     const dateCounts = {};
-    const datasetToUse = state.countMode === 'DISTINCT' ? noticias : records;
-
+    const datasetToUse = noticiasState.countMode === 'DISTINCT' ? noticias : records;
     const allKnownDays = ['2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02'];
-    allKnownDays.forEach(day => {
-      dateCounts[day] = 0;
-    });
+    allKnownDays.forEach(d => { dateCounts[d] = 0; });
 
     datasetToUse.forEach(item => {
-      const d = item.fecha_dia;
-      if (d) {
-        dateCounts[d] = (dateCounts[d] || 0) + 1;
-      }
+      if (item.fecha_dia) dateCounts[item.fecha_dia] = (dateCounts[item.fecha_dia] || 0) + 1;
     });
 
-    const filteredDays = allKnownDays.filter(day => {
-      if (state.fechaInicio && day < state.fechaInicio) return false;
-      if (state.fechaFin && day > state.fechaFin) return false;
+    const filteredDays = allKnownDays.filter(d => {
+      if (noticiasState.fechaInicio && d < noticiasState.fechaInicio) return false;
+      if (noticiasState.fechaFin && d > noticiasState.fechaFin) return false;
       return true;
     });
 
     const dataValues = filteredDays.map(d => dateCounts[d] || 0);
-
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const displayLabels = filteredDays.map(l => {
       const parts = l.split('-');
-      const month = parseInt(parts[1], 10) - 1;
-      return `${parts[2]} ${monthNames[month]}`;
+      return `${parts[2]} ${monthNames[parseInt(parts[1], 10) - 1]}`;
     });
 
-    if (lineChartInstance) {
-      lineChartInstance.destroy();
-    }
-
-    const metricTitle = state.countMode === 'DISTINCT' ? 'Noticias Creadas (SPOA Únicas)' : 'Total Conductas / Delitos';
+    if (chartNoticiasLine) chartNoticiasLine.destroy();
 
     const chartContext = ctx.getContext('2d');
     const gradient = chartContext.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, 'rgba(19, 64, 116, 0.28)');
     gradient.addColorStop(1, 'rgba(19, 64, 116, 0.01)');
 
-    lineChartInstance = new Chart(ctx, {
+    chartNoticiasLine = new Chart(ctx, {
       type: 'line',
       data: {
         labels: displayLabels,
         datasets: [{
-          label: metricTitle,
+          label: noticiasState.countMode === 'DISTINCT' ? 'Noticias Creadas (SPOA Únicas)' : 'Total Conductas / Delitos',
           data: dataValues,
           borderColor: '#0b2545',
           backgroundColor: gradient,
@@ -453,360 +485,182 @@
           pointBackgroundColor: '#c59b27',
           pointBorderColor: '#0b2545',
           pointBorderWidth: 2,
-          pointRadius: 6,
-          pointHoverRadius: 9,
-          pointHoverBackgroundColor: '#c59b27',
-          pointHoverBorderColor: '#ffffff',
-          pointHoverBorderWidth: 3
+          pointRadius: 6
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        layout: {
-          padding: { top: 25, right: 15, left: 10, bottom: 5 }
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: {
-              boxWidth: 14,
-              font: { size: 12, weight: 'bold', family: 'system-ui' },
-              color: '#0b2545'
-            }
-          },
-          tooltip: {
-            backgroundColor: '#0b2545',
-            titleFont: { size: 13, weight: 'bold' },
-            bodyFont: { size: 12 },
-            padding: 12,
-            cornerRadius: 8,
-            callbacks: {
-              label: function(context) {
-                return ` ${context.parsed.y} noticias creadas`;
-              }
-            }
-          }
-        },
+        layout: { padding: { top: 25, right: 15, left: 10, bottom: 5 } },
         scales: {
-          x: {
-            grid: { color: 'rgba(226, 232, 240, 0.8)' },
-            ticks: {
-              autoSkip: false,
-              color: '#1e293b',
-              font: { size: 12, weight: '700' }
-            }
-          },
-          y: {
-            beginAtZero: true,
-            grid: {
-              color: 'rgba(226, 232, 240, 0.8)',
-              borderDash: [3, 3]
-            },
-            ticks: {
-              color: '#475569',
-              font: { size: 11 },
-              precision: 0
-            }
-          }
+          x: { ticks: { autoSkip: false, color: '#1e293b', font: { size: 12, weight: '700' } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
         }
       }
     });
   }
 
-  // Render Bar Chart: EXCLUSIVAMENTE DE DELITOS
-  function renderBarChart(records, noticias) {
+  function renderNoticiasBarChart(records) {
     const ctx = document.getElementById('barChartNoticias');
     if (!ctx) return;
 
-    records = records || getFilteredRecords();
-
-    // Group only by Delito
     const counts = {};
     records.forEach(r => {
-      const val = r.delito || 'SIN DATO';
-      counts[val] = (counts[val] || 0) + 1;
+      if (r.delito) counts[r.delito] = (counts[r.delito] || 0) + 1;
     });
 
-    // Top 8 Delitos descending
-    const sortedEntries = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8);
-
-    const labels = sortedEntries.map(e => {
-      if (e[0].length > 28) return e[0].substring(0, 26) + '...';
-      return e[0];
-    });
-
-    const dataValues = sortedEntries.map(e => e[1]);
-    const totalCount = dataValues.reduce((a, b) => a + b, 0) || 1;
-
-    if (barChartInstance) {
-      barChartInstance.destroy();
+    let entries = Object.entries(counts);
+    if (noticiasState.barDelitoQuery) {
+      entries = entries.filter(e => e[0].toLowerCase().includes(noticiasState.barDelitoQuery));
     }
 
-    const govColors = [
-      '#0b2545', '#134074', '#1d4ed8', '#0284c7',
-      '#c59b27', '#d97706', '#059669', '#475569'
-    ];
+    const sorted = entries.sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const labels = sorted.map(e => e[0].length > 28 ? e[0].substring(0, 26) + '...' : e[0]);
+    const dataValues = sorted.map(e => e[1]);
+    const totalCount = dataValues.reduce((a, b) => a + b, 0) || 1;
 
-    barChartInstance = new Chart(ctx, {
+    if (chartNoticiasBar) chartNoticiasBar.destroy();
+
+    const colors = ['#0b2545', '#134074', '#1d4ed8', '#0284c7', '#c59b27', '#d97706', '#059669', '#475569'];
+
+    chartNoticiasBar = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
         datasets: [{
-          label: 'Noticias / Registros por Delito',
           data: dataValues,
-          backgroundColor: govColors.slice(0, labels.length),
+          backgroundColor: colors.slice(0, labels.length),
           borderRadius: 6,
-          maxBarThickness: 24,
-          borderSkipped: false
+          maxBarThickness: 24
         }]
       },
       options: {
-        indexAxis: 'y', // Horizontal bars for clean readability of crime names
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        layout: {
-          padding: { top: 15, right: 35, left: 5, bottom: 5 }
-        },
+        layout: { padding: { top: 15, right: 35, left: 5, bottom: 5 } },
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#0b2545',
-            titleFont: { size: 13, weight: 'bold' },
-            bodyFont: { size: 12 },
-            padding: 10,
-            cornerRadius: 6,
             callbacks: {
-              title: function(items) {
-                const idx = items[0].dataIndex;
-                return sortedEntries[idx][0];
-              },
-              label: function(context) {
-                const percent = ((context.parsed.x / totalCount) * 100).toFixed(1);
-                return ` ${context.parsed.x} noticias (${percent}%)`;
-              }
+              title: items => sorted[items[0].dataIndex][0],
+              label: ctx => ` ${ctx.parsed.x} noticias (${((ctx.parsed.x / totalCount) * 100).toFixed(1)}%)`
             }
           }
         },
         scales: {
-          x: {
-            beginAtZero: true,
-            grid: {
-              color: 'rgba(226, 232, 240, 0.8)',
-              borderDash: [3, 3]
-            },
-            ticks: {
-              color: '#475569',
-              font: { size: 11 },
-              precision: 0
-            }
-          },
-          y: {
-            grid: { display: false },
-            ticks: {
-              color: '#0f172a',
-              font: { size: 11, weight: '600' }
-            }
-          }
+          x: { beginAtZero: true, ticks: { precision: 0 } },
+          y: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '600' } } }
         }
       }
     });
   }
 
-  // Render Donut Chart (Distribución de Tipo de Noticia)
-  function renderDonutChart(records, noticias) {
+  function renderNoticiasDonutChart(records, noticias) {
     const ctx = document.getElementById('donutChartTipo');
     if (!ctx) return;
 
-    records = records || getFilteredRecords();
-    noticias = noticias || getFilteredDistinctNoticias(records);
-
     const counts = {};
-    const datasetToUse = state.countMode === 'DISTINCT' ? noticias : records;
-
+    const datasetToUse = noticiasState.countMode === 'DISTINCT' ? noticias : records;
     datasetToUse.forEach(r => {
       const val = r.tipo_noticia || 'SIN DATO';
       counts[val] = (counts[val] || 0) + 1;
     });
 
-    const labels = Object.keys(counts);
-    const dataValues = Object.values(counts);
+    if (chartNoticiasDonut) chartNoticiasDonut.destroy();
 
-    const donutColors = ['#0b2545', '#1d4ed8', '#c59b27', '#059669', '#7c3aed'];
-
-    if (donutChartInstance) {
-      donutChartInstance.destroy();
-    }
-
-    donutChartInstance = new Chart(ctx, {
+    chartNoticiasDonut = new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: labels,
+        labels: Object.keys(counts),
         datasets: [{
-          data: dataValues,
-          backgroundColor: donutColors.slice(0, labels.length),
+          data: Object.values(counts),
+          backgroundColor: ['#0b2545', '#1d4ed8', '#c59b27', '#059669', '#7c3aed'],
           borderWidth: 2,
-          borderColor: '#ffffff',
-          hoverOffset: 6
+          borderColor: '#ffffff'
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              boxWidth: 12,
-              font: { size: 11, weight: '600' },
-              color: '#334155',
-              padding: 12
-            }
-          },
-          tooltip: {
-            backgroundColor: '#0b2545',
-            padding: 10,
-            cornerRadius: 6,
-            callbacks: {
-              label: function(context) {
-                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                const percent = ((context.parsed / total) * 100).toFixed(1);
-                return ` ${context.label}: ${context.parsed} (${percent}%)`;
-              }
-            }
-          }
-        },
+        plugins: { legend: { position: 'bottom' } },
         cutout: '62%'
       }
     });
   }
 
-  // Render Table
-  function renderTable(records, noticias) {
+  function renderNoticiasTable(records, noticias) {
     const tbody = document.getElementById('tableNoticiasBody');
     if (!tbody) return;
 
-    records = records || getFilteredRecords();
-    noticias = noticias || getFilteredDistinctNoticias(records);
+    records = records || getFilteredNoticias();
+    noticias = noticias || getDistinctFilteredNoticias(records);
 
-    let tableItems = noticias;
-    if (state.searchQuery) {
-      const q = state.searchQuery;
-      tableItems = noticias.filter(n => {
-        return (
-          (n.id && n.id.toLowerCase().includes(q)) ||
-          (n.municipio_hechos && n.municipio_hechos.toLowerCase().includes(q)) ||
-          (n.departamento_hechos && n.departamento_hechos.toLowerCase().includes(q)) ||
-          (n.tipo_noticia && n.tipo_noticia.toLowerCase().includes(q)) ||
-          (n.delito_principal && n.delito_principal.toLowerCase().includes(q)) ||
-          (n.despacho && n.despacho.toLowerCase().includes(q)) ||
-          (n.receptor && n.receptor.toLowerCase().includes(q))
-        );
-      });
+    let items = noticias;
+    if (noticiasState.searchQuery) {
+      const q = noticiasState.searchQuery;
+      items = noticias.filter(n => (
+        (n.id && n.id.toLowerCase().includes(q)) ||
+        (n.municipio_hechos && n.municipio_hechos.toLowerCase().includes(q)) ||
+        (n.delito_principal && n.delito_principal.toLowerCase().includes(q))
+      ));
     }
 
-    const totalItems = tableItems.length;
-    const totalPages = Math.ceil(totalItems / state.pageSize) || 1;
-    if (state.page > totalPages) state.page = totalPages;
+    const total = items.length;
+    const totalPages = Math.ceil(total / noticiasState.pageSize) || 1;
+    if (noticiasState.page > totalPages) noticiasState.page = totalPages;
 
-    const startIdx = (state.page - 1) * state.pageSize;
-    const pageItems = tableItems.slice(startIdx, startIdx + state.pageSize);
+    const start = (noticiasState.page - 1) * noticiasState.pageSize;
+    const pageItems = items.slice(start, start + noticiasState.pageSize);
 
     const countInfo = document.getElementById('tableCountInfo');
-    if (countInfo) {
-      countInfo.textContent = `Mostrando ${totalItems === 0 ? 0 : startIdx + 1} - ${Math.min(startIdx + state.pageSize, totalItems)} de ${totalItems} noticias`;
-    }
-
-    if (pageItems.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 30px; color: #64748b;">No se encontraron noticias que coincidan con los criterios de búsqueda.</td></tr>`;
-      renderPagination(totalPages);
-      return;
-    }
+    if (countInfo) countInfo.textContent = `Mostrando ${total === 0 ? 0 : start + 1} - ${Math.min(start + noticiasState.pageSize, total)} de ${total} noticias`;
 
     tbody.innerHTML = pageItems.map(item => {
       let badgeClass = 'tipo-denuncia';
       if (item.tipo_noticia.includes('QUERELLA')) badgeClass = 'tipo-querella';
       else if (item.tipo_noticia.includes('ACTOS')) badgeClass = 'tipo-actos-urgentes';
-      else if (item.tipo_noticia.includes('OFICIO')) badgeClass = 'tipo-oficio';
-      else if (item.tipo_noticia.includes('COMPULSACION')) badgeClass = 'tipo-compulsacion';
-
-      const delitosCountBadge = item.total_delitos > 1 
-        ? `<span style="font-size: 0.7rem; background: #e2e8f0; color: #334155; padding: 2px 6px; border-radius: 4px; margin-left: 5px;">+${item.total_delitos - 1} delito(s)</span>`
-        : '';
 
       return `
         <tr>
-          <td><strong style="color: #0b2545; font-family: monospace; font-size: 0.85rem;">${item.id}</strong></td>
+          <td><strong style="color: #0b2545; font-family: monospace;">${item.id}</strong></td>
           <td>${item.fecha_noticia ? item.fecha_noticia.substring(0, 16) : '-'}</td>
           <td><span class="badge-tipo ${badgeClass}">${item.tipo_noticia}</span></td>
           <td>${item.departamento_hechos || 'SIN DATO'}</td>
           <td><strong>${item.municipio_hechos || 'SIN DATO'}</strong></td>
-          <td>${item.delito_principal} ${delitosCountBadge}</td>
+          <td>${item.delito_principal}</td>
           <td><span class="badge-estado estado-activo">ACTIVO</span></td>
           <td style="text-align: right;">
-            <button class="btn-view-detail" data-id="${item.id}">Ver Ficha</button>
+            <button class="btn-view-detail" onclick="showNoticiaDetail('${item.id}')">Ver Ficha</button>
           </td>
         </tr>
       `;
     }).join('');
 
-    tbody.querySelectorAll('.btn-view-detail').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-id');
-        showNoticeDetail(id);
-      });
-    });
-
-    renderPagination(totalPages);
+    renderNoticiasPagination(totalPages);
   }
 
-  function renderPagination(totalPages) {
+  function renderNoticiasPagination(totalPages) {
     const container = document.getElementById('paginationControls');
     if (!container) return;
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
 
-    if (totalPages <= 1) {
-      container.innerHTML = '';
-      return;
-    }
-
-    let html = `
-      <button class="btn-page" id="btnPagePrev" ${state.page === 1 ? 'disabled' : ''}>Anterior</button>
-      <span style="font-size: 0.8rem; font-weight: 600; padding: 0 8px; color: #0b2545;">Página ${state.page} de ${totalPages}</span>
-      <button class="btn-page" id="btnPageNext" ${state.page === totalPages ? 'disabled' : ''}>Siguiente</button>
+    container.innerHTML = `
+      <button class="btn-page" ${noticiasState.page === 1 ? 'disabled' : ''} onclick="changeNoticiasPage(-1)">Anterior</button>
+      <span style="font-size: 0.8rem; font-weight: 600; padding: 0 8px;">Página ${noticiasState.page} de ${totalPages}</span>
+      <button class="btn-page" ${noticiasState.page === totalPages ? 'disabled' : ''} onclick="changeNoticiasPage(1)">Siguiente</button>
     `;
-
-    container.innerHTML = html;
-
-    const prev = document.getElementById('btnPagePrev');
-    const next = document.getElementById('btnPageNext');
-
-    if (prev) {
-      prev.addEventListener('click', () => {
-        if (state.page > 1) {
-          state.page--;
-          renderTable();
-        }
-      });
-    }
-
-    if (next) {
-      next.addEventListener('click', () => {
-        if (state.page < totalPages) {
-          state.page++;
-          renderTable();
-        }
-      });
-    }
   }
 
-  function showNoticeDetail(noticiaId) {
-    const noticeRecords = rawRecords.filter(r => r.id === noticiaId);
-    if (!noticeRecords || noticeRecords.length === 0) return;
+  window.changeNoticiasPage = function(delta) {
+    noticiasState.page += delta;
+    renderNoticiasTable();
+  };
 
-    const base = noticeRecords[0];
+  window.showNoticiaDetail = function(noticiaId) {
+    const list = rawNoticias.filter(r => r.id === noticiaId);
+    if (!list.length) return;
+    const base = list[0];
     const modal = document.getElementById('detailModal');
     if (!modal) return;
 
@@ -824,114 +678,562 @@
     document.getElementById('modalReceptor').textContent = base.receptor || 'SIN DATO';
     document.getElementById('modalSeccional').textContent = base.seccional || 'SIN DATO';
 
-    const delitosList = noticeRecords.map(r => r.delito).filter(Boolean);
-    const uniqueDelitos = [...new Set(delitosList)];
-    document.getElementById('modalDelitosList').innerHTML = uniqueDelitos.map(d => `<li style="margin-bottom: 4px;"><strong>${d}</strong></li>`).join('');
-
+    const uniqueDelitos = [...new Set(list.map(r => r.delito).filter(Boolean))];
+    document.getElementById('modalDelitosList').innerHTML = uniqueDelitos.map(d => `<li><strong>${d}</strong></li>`).join('');
     modal.classList.add('active');
+  };
+
+  function exportNoticiasCSV() {
+    const distinct = getDistinctFilteredNoticias(getFilteredNoticias());
+    let csv = '\uFEFFNumero Noticia,Fecha Creacion,Tipo Noticia,Municipio,Delito Principal\n';
+    distinct.forEach(n => {
+      csv += `"${n.id}","${n.fecha_noticia}","${n.tipo_noticia}","${n.municipio_hechos}","${n.delito_principal}"\n`;
+    });
+    downloadBlob(csv, `Reporte_Noticias_${new Date().toISOString().substring(0, 10)}.csv`);
   }
 
-  function handleExcelUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+  // ==========================================
+  // MÓDULO 2: CASOS INGRESO URI LOGIC
+  // ==========================================
+  function populateUriFilters() {
+    const delitoSelect = document.getElementById('filterUriDelito');
+    if (delitoSelect) {
+      const delitos = [...new Set(rawUriCases.map(r => r.delito).filter(Boolean))].sort();
+      delitoSelect.innerHTML = '<option value="ALL">Todos los Delitos</option>';
+      delitos.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d.length > 40 ? d.substring(0, 38) + '...' : d;
+        delitoSelect.appendChild(opt);
+      });
+    }
 
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-      try {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet);
+    const capSelect = document.getElementById('filterUriTipoCaptura');
+    if (capSelect) {
+      const tipos = [...new Set(rawUriCases.map(r => r.tipo_captura).filter(t => t && t !== 'Pendiente' && !t.toLowerCase().includes('pendiente')))].sort();
+      capSelect.innerHTML = '<option value="ALL">Todos los Tipos de Captura</option>';
+      tipos.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        capSelect.appendChild(opt);
+      });
+    }
 
-        if (json.length === 0) {
-          alert('El archivo no contiene filas de datos.');
-          return;
-        }
+    const medSelect = document.getElementById('filterUriMedida');
+    if (medSelect) {
+      const medidas = [...new Set(rawUriCases.map(r => r.imposicion_medida).filter(Boolean))].sort();
+      medSelect.innerHTML = '<option value="ALL">Todas las Medidas</option>';
+      medidas.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        medSelect.appendChild(opt);
+      });
+    }
 
-        const newRecords = [];
-        json.forEach(row => {
-          const getCol = (patterns) => {
-            for (let k of Object.keys(row)) {
-              for (let p of patterns) {
-                if (k.toLowerCase().includes(p.toLowerCase())) return String(row[k] || '').trim();
-              }
-            }
-            return '';
-          };
+    const impSelect = document.getElementById('filterUriImputacion');
+    if (impSelect) {
+      const imputaciones = [...new Set(rawUriCases.map(r => r.formulacion_imputacion).filter(Boolean))].sort();
+      impSelect.innerHTML = '<option value="ALL">Todas las Situaciones</option>';
+      imputaciones.forEach(i => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        impSelect.appendChild(opt);
+      });
+    }
+  }
 
-          const id = getCol(['noticia criminal', 'nmero', 'numero']);
-          const fechaNoticia = getCol(['fecha noticia']);
-          const tipoNoticia = getCol(['tipo noticia']);
-          const dpto = getCol(['departamento de los hechos', 'departamento hechos']);
-          const muni = getCol(['municipio de los hechos', 'municipio hechos']);
-          const delito = getCol(['delito']);
+  function setupUriListeners() {
+    const delitoSelect = document.getElementById('filterUriDelito');
+    if (delitoSelect) {
+      delitoSelect.addEventListener('change', (e) => {
+        uriState.delito = e.target.value;
+        uriState.page = 1;
+        updateUriDashboard();
+      });
+    }
 
-          if (id) {
-            newRecords.push({
-              id: id,
-              fecha_noticia: fechaNoticia,
-              fecha_dia: fechaNoticia.substring(0, 10),
-              tipo_noticia: tipoNoticia || 'SIN DATO',
-              estado: 'ACTIVO',
-              departamento_hechos: dpto || 'SIN DATO',
-              municipio_hechos: muni || 'SIN DATO',
-              delito: delito || 'SIN DATO',
-              delito_agrupado: getCol(['delito agrupado']),
-              unidad_receptora: getCol(['unidad receptora']),
-              despacho: getCol(['despacho']),
-              receptor: getCol(['receptor']),
-              seccional: getCol(['seccional']),
-              direccion: getCol(['direcci']),
-              barrio: getCol(['barrio'])
-            });
-          }
-        });
+    // URI Delito text search
+    const uriDelitoInput = document.getElementById('filterUriDelitoInput');
+    if (uriDelitoInput) {
+      uriDelitoInput.addEventListener('input', (e) => {
+        uriState.delitoQuery = e.target.value.toLowerCase().trim();
+        uriState.page = 1;
+        updateUriDashboard();
+      });
+    }
 
-        if (newRecords.length > 0) {
-          rawRecords = newRecords;
-          initDateRange();
-          populateFilterOptions();
-          updateDashboard();
-          alert(`¡Datos cargados exitosamente! Se procesaron ${rawRecords.length} registros.`);
-        } else {
-          alert('No se pudieron identificar las columnas requeridas en el archivo Excel.');
-        }
-      } catch (err) {
-        console.error('Error al procesar el archivo Excel:', err);
-        alert('Ocurrió un error al leer el archivo Excel.');
+    // URI Delito bar chart live search
+    const barUriDelitoInput = document.getElementById('barUriDelitoSearch');
+    if (barUriDelitoInput) {
+      barUriDelitoInput.addEventListener('input', (e) => {
+        uriState.barDelitoQuery = e.target.value.toLowerCase().trim();
+        renderUriDelitosChart(getFilteredUriCases());
+      });
+    }
+
+    const capSelect = document.getElementById('filterUriTipoCaptura');
+    if (capSelect) {
+      capSelect.addEventListener('change', (e) => {
+        uriState.tipoCaptura = e.target.value;
+        uriState.page = 1;
+        updateUriDashboard();
+      });
+    }
+
+    const medSelect = document.getElementById('filterUriMedida');
+    if (medSelect) {
+      medSelect.addEventListener('change', (e) => {
+        uriState.medida = e.target.value;
+        uriState.page = 1;
+        updateUriDashboard();
+      });
+    }
+
+    const impSelect = document.getElementById('filterUriImputacion');
+    if (impSelect) {
+      impSelect.addEventListener('change', (e) => {
+        uriState.imputacion = e.target.value;
+        uriState.page = 1;
+        updateUriDashboard();
+      });
+    }
+
+    const searchInput = document.getElementById('tableUriSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        uriState.searchQuery = e.target.value.toLowerCase().trim();
+        uriState.page = 1;
+        renderUriTable();
+      });
+    }
+
+    const btnReset = document.getElementById('btnResetUriFilters');
+    if (btnReset) {
+      btnReset.addEventListener('click', () => {
+        uriState.delito = 'ALL';
+        uriState.delitoQuery = '';
+        uriState.barDelitoQuery = '';
+        uriState.tipoCaptura = 'ALL';
+        uriState.medida = 'ALL';
+        uriState.imputacion = 'ALL';
+        uriState.searchQuery = '';
+        uriState.page = 1;
+        if (delitoSelect) delitoSelect.value = 'ALL';
+        if (uriDelitoInput) uriDelitoInput.value = '';
+        if (barUriDelitoInput) barUriDelitoInput.value = '';
+        if (capSelect) capSelect.value = 'ALL';
+        if (medSelect) medSelect.value = 'ALL';
+        if (impSelect) impSelect.value = 'ALL';
+        if (searchInput) searchInput.value = '';
+        updateUriDashboard();
+      });
+    }
+  }
+
+  function getFilteredUriCases() {
+    return rawUriCases.filter(c => {
+      if (uriState.delito !== 'ALL' && c.delito !== uriState.delito) return false;
+      if (uriState.delitoQuery && (!c.delito || !c.delito.toLowerCase().includes(uriState.delitoQuery))) return false;
+      if (uriState.tipoCaptura !== 'ALL' && c.tipo_captura !== uriState.tipoCaptura) return false;
+      if (uriState.medida !== 'ALL' && c.imposicion_medida !== uriState.medida) return false;
+      if (uriState.imputacion !== 'ALL' && c.formulacion_imputacion !== uriState.imputacion) return false;
+      return true;
+    });
+  }
+
+  function updateUriDashboard() {
+    const filtered = getFilteredUriCases();
+
+    // 1. KPIs
+    const totalProcesados = filtered.length;
+    const kpiTotalEl = document.getElementById('kpiUriTotalProcesados');
+    if (kpiTotalEl) kpiTotalEl.textContent = totalProcesados;
+
+    // Top delito
+    const delitoCounts = {};
+    filtered.forEach(c => {
+      if (c.delito) delitoCounts[c.delito] = (delitoCounts[c.delito] || 0) + 1;
+    });
+    let topName = 'SIN DATO';
+    let topCount = 0;
+    for (const [d, cnt] of Object.entries(delitoCounts)) {
+      if (cnt > topCount) { topCount = cnt; topName = d; }
+    }
+    const kpiTopCountEl = document.getElementById('kpiUriTopDelitoCount');
+    const kpiTopNameEl = document.getElementById('kpiUriTopDelitoName');
+    if (kpiTopCountEl && kpiTopNameEl) {
+      kpiTopCountEl.textContent = `${topCount} casos`;
+      kpiTopNameEl.textContent = topName;
+      kpiTopNameEl.title = topName;
+    }
+
+    // Flagrancias
+    const flagrancias = filtered.filter(c => c.tipo_captura === 'Flagrancia').length;
+    const kpiFlagEl = document.getElementById('kpiUriFlagrancias');
+    if (kpiFlagEl) kpiFlagEl.textContent = flagrancias;
+
+    // Carcelarias
+    const carcelarias = filtered.filter(c => c.imposicion_medida === 'Carcelaria').length;
+    const kpiCarcEl = document.getElementById('kpiUriCarcelarias');
+    if (kpiCarcEl) kpiCarcEl.textContent = carcelarias;
+
+    // Active filters
+    const container = document.getElementById('activeUriFiltersContainer');
+    if (container) {
+      const badges = [];
+      if (uriState.delito !== 'ALL') badges.push(`<span>Delito: <strong>${uriState.delito.substring(0, 25)}...</strong></span>`);
+      if (uriState.tipoCaptura !== 'ALL') badges.push(`<span>Captura: <strong>${uriState.tipoCaptura}</strong></span>`);
+      if (uriState.medida !== 'ALL') badges.push(`<span>Medida: <strong>${uriState.medida}</strong></span>`);
+      if (uriState.imputacion !== 'ALL') badges.push(`<span>Imputación: <strong>${uriState.imputacion}</strong></span>`);
+      container.innerHTML = badges.length ? badges.map(b => `<div class="active-filter-pill">${b}</div>`).join('') : '<span style="font-size:0.75rem; color:#94a3b8;">Sin filtros activos (Consolidado general)</span>';
+    }
+
+    renderUriTimeline(filtered);
+    renderUriDelitosChart(filtered);
+    renderUriTipoCapturaChart(filtered);
+    renderUriMedidaChart(filtered);
+    renderUriImputacionChart(filtered);
+    renderUriTable(filtered);
+  }
+
+  // 1. Línea del tiempo por fechas de captura
+  function renderUriTimeline(filtered) {
+    const ctx = document.getElementById('lineChartUriCaptura');
+    if (!ctx) return;
+
+    const days = ['2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02'];
+    const counts = {};
+    days.forEach(d => { counts[d] = 0; });
+
+    filtered.forEach(c => {
+      if (c.fecha_captura && counts[c.fecha_captura] !== undefined) {
+        counts[c.fecha_captura]++;
       }
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function exportToCSV() {
-    const filteredRecords = getFilteredRecords();
-    const filteredNoticias = getFilteredDistinctNoticias(filteredRecords);
-
-    let csvContent = '\uFEFF';
-    csvContent += 'Numero Noticia Criminal,Fecha Creacion,Tipo Noticia,Departamento Hechos,Municipio Hechos,Delito Principal,Total Delitos,Despacho,Funcionario Receptor\n';
-
-    filteredNoticias.forEach(n => {
-      const escape = (val) => `"${(val || '').replace(/"/g, '""')}"`;
-      csvContent += [
-        escape(n.id),
-        escape(n.fecha_noticia),
-        escape(n.tipo_noticia),
-        escape(n.departamento_hechos),
-        escape(n.municipio_hechos),
-        escape(n.delito_principal),
-        n.total_delitos,
-        escape(n.despacho),
-        escape(n.receptor)
-      ].join(',') + '\n';
     });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const labels = days.map(d => {
+      const p = d.split('-');
+      return `${p[2]} ${monthNames[parseInt(p[1], 10) - 1]}`;
+    });
+    const values = days.map(d => counts[d]);
+
+    if (chartUriTimeline) chartUriTimeline.destroy();
+
+    const chartContext = ctx.getContext('2d');
+    const gradient = chartContext.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(197, 155, 39, 0.35)');
+    gradient.addColorStop(1, 'rgba(197, 155, 39, 0.02)');
+
+    chartUriTimeline = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Personas Capturadas',
+          data: values,
+          borderColor: '#b45309',
+          backgroundColor: gradient,
+          borderWidth: 3,
+          fill: true,
+          tension: 0.28,
+          pointBackgroundColor: '#0b2545',
+          pointBorderColor: '#c59b27',
+          pointBorderWidth: 2,
+          pointRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 25, right: 15, left: 10, bottom: 5 } },
+        scales: {
+          x: { ticks: { autoSkip: false, color: '#0b2545', font: { size: 12, weight: '700' } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // 2. Delitos: cuántos por cada delito
+  function renderUriDelitosChart(filtered) {
+    const ctx = document.getElementById('barChartUriDelitos');
+    if (!ctx) return;
+
+    const counts = {};
+    filtered.forEach(c => {
+      if (c.delito) counts[c.delito] = (counts[c.delito] || 0) + 1;
+    });
+
+    let entries = Object.entries(counts);
+    if (uriState.barDelitoQuery) {
+      entries = entries.filter(e => e[0].toLowerCase().includes(uriState.barDelitoQuery));
+    }
+
+    const sorted = entries.sort((a, b) => b[1] - a[1]).slice(0, 7);
+    const labels = sorted.map(e => e[0].length > 28 ? e[0].substring(0, 26) + '...' : e[0]);
+    const values = sorted.map(e => e[1]);
+    const total = values.reduce((a, b) => a + b, 0) || 1;
+
+    if (chartUriDelitos) chartUriDelitos.destroy();
+
+    const colors = ['#0b2545', '#134074', '#1d4ed8', '#c59b27', '#d97706', '#059669', '#7c3aed'];
+
+    chartUriDelitos = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Procesados por Delito',
+          data: values,
+          backgroundColor: colors.slice(0, labels.length),
+          borderRadius: 6,
+          maxBarThickness: 24
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 15, right: 35, left: 5, bottom: 5 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: items => sorted[items[0].dataIndex][0],
+              label: ctx => ` ${ctx.parsed.x} procesados (${((ctx.parsed.x / total) * 100).toFixed(1)}%)`
+            }
+          }
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0 } },
+          y: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '600' } } }
+        }
+      }
+    });
+  }
+
+  // 3. Gráfica de barra por tipos de captura (excluye 'Pendiente')
+  function renderUriTipoCapturaChart(filtered) {
+    const ctx = document.getElementById('barChartUriTipoCaptura');
+    if (!ctx) return;
+
+    const counts = {};
+    filtered.forEach(c => {
+      const t = c.tipo_captura;
+      if (t && t !== 'Pendiente' && !t.toLowerCase().includes('pendiente') && !t.toLowerCase().includes('sin clasificar')) {
+        counts[t] = (counts[t] || 0) + 1;
+      }
+    });
+
+    const labels = Object.keys(counts);
+    const values = Object.values(counts);
+
+    if (chartUriTipoCaptura) chartUriTipoCaptura.destroy();
+
+    const colors = ['#0b2545', '#c59b27', '#1d4ed8'];
+
+    chartUriTipoCaptura = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors.slice(0, labels.length),
+          borderRadius: { topLeft: 6, topRight: 6 },
+          maxBarThickness: 45
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 22, right: 10, left: 5, bottom: 5 } },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#0f172a', font: { size: 11, weight: '700' } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // 4. Gráfica de barras por imposición de medida
+  function renderUriMedidaChart(filtered) {
+    const ctx = document.getElementById('barChartUriMedida');
+    if (!ctx) return;
+
+    const counts = {};
+    filtered.forEach(c => {
+      const m = c.imposicion_medida || 'En Trámite';
+      counts[m] = (counts[m] || 0) + 1;
+    });
+
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const labels = sorted.map(e => e[0]);
+    const values = sorted.map(e => e[1]);
+
+    if (chartUriMedida) chartUriMedida.destroy();
+
+    const colors = ['#64748b', '#0369a1', '#15803d', '#b91c1c', '#c59b27'];
+
+    chartUriMedida = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors.slice(0, labels.length),
+          borderRadius: { topLeft: 6, topRight: 6 },
+          maxBarThickness: 42
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 22, right: 10, left: 5, bottom: 5 } },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#0f172a', font: { size: 10.5, weight: '700' } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // 5. Gráfica de barras por formulación de imputación
+  function renderUriImputacionChart(filtered) {
+    const ctx = document.getElementById('barChartUriImputacion');
+    if (!ctx) return;
+
+    const counts = {};
+    filtered.forEach(c => {
+      const imp = c.formulacion_imputacion || 'Pendiente';
+      counts[imp] = (counts[imp] || 0) + 1;
+    });
+
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const labels = sorted.map(e => e[0]);
+    const values = sorted.map(e => e[1]);
+
+    if (chartUriImputacion) chartUriImputacion.destroy();
+
+    const colors = ['#64748b', '#0284c7', '#b91c1c', '#c59b27'];
+
+    chartUriImputacion = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors.slice(0, labels.length),
+          borderRadius: { topLeft: 6, topRight: 6 },
+          maxBarThickness: 42
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { top: 22, right: 10, left: 5, bottom: 5 } },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#0f172a', font: { size: 10, weight: '700' } } },
+          y: { beginAtZero: true, ticks: { precision: 0 } }
+        }
+      }
+    });
+  }
+
+  // Table of Processed Persons
+  function renderUriTable(filtered) {
+    const tbody = document.getElementById('tableUriBody');
+    if (!tbody) return;
+
+    filtered = filtered || getFilteredUriCases();
+
+    let items = filtered;
+    if (uriState.searchQuery) {
+      const q = uriState.searchQuery;
+      items = filtered.filter(c => (
+        (c.procesado && c.procesado.toLowerCase().includes(q)) ||
+        (c.numero_documento && c.numero_documento.toLowerCase().includes(q)) ||
+        (c.noticia_criminal && c.noticia_criminal.toLowerCase().includes(q)) ||
+        (c.delito && c.delito.toLowerCase().includes(q)) ||
+        (c.fiscal && c.fiscal.toLowerCase().includes(q))
+      ));
+    }
+
+    const total = items.length;
+    const totalPages = Math.ceil(total / uriState.pageSize) || 1;
+    if (uriState.page > totalPages) uriState.page = totalPages;
+
+    const start = (uriState.page - 1) * uriState.pageSize;
+    const pageItems = items.slice(start, start + uriState.pageSize);
+
+    const countInfo = document.getElementById('tableUriCountInfo');
+    if (countInfo) countInfo.textContent = `Mostrando ${total === 0 ? 0 : start + 1} - ${Math.min(start + uriState.pageSize, total)} de ${total} casos`;
+
+    tbody.innerHTML = pageItems.map(c => {
+      let capBadge = 'tipo-denuncia';
+      if (c.tipo_captura === 'Flagrancia') capBadge = 'tipo-actos-urgentes';
+      else if (c.tipo_captura === 'Orden de Captura') capBadge = 'tipo-querella';
+
+      let medBadge = 'estado-activo';
+      if (c.imposicion_medida === 'Carcelaria') medBadge = 'tipo-actos-urgentes';
+      else if (c.imposicion_medida.includes('Libertad')) medBadge = 'tipo-compulsacion';
+
+      return `
+        <tr>
+          <td><strong>${c.num}</strong></td>
+          <td>${c.fecha_captura} <span style="font-size:0.75rem; color:#64748b;">${c.hora_captura}</span></td>
+          <td><strong style="color: #0b2545;">${c.procesado}</strong></td>
+          <td><span style="font-family: monospace;">${c.tipo_documento} ${c.numero_documento || 'S/D'}</span></td>
+          <td style="font-size: 0.8rem;">${c.delito}</td>
+          <td>${(c.tipo_captura && c.tipo_captura !== 'Pendiente') ? `<span class="badge-tipo ${capBadge}">${c.tipo_captura}</span>` : '<span style="color:#94a3b8; font-size:0.8rem;">-</span>'}</td>
+          <td><span class="badge-tipo ${medBadge}">${c.imposicion_medida}</span></td>
+          <td><span style="font-size:0.76rem; font-weight:600;">${c.formulacion_imputacion}</span></td>
+          <td style="font-size: 0.78rem;">${c.despacho}</td>
+        </tr>
+      `;
+    }).join('');
+
+    renderUriPagination(totalPages);
+  }
+
+  function renderUriPagination(totalPages) {
+    const container = document.getElementById('paginationUriControls');
+    if (!container) return;
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+    container.innerHTML = `
+      <button class="btn-page" ${uriState.page === 1 ? 'disabled' : ''} onclick="changeUriPage(-1)">Anterior</button>
+      <span style="font-size: 0.8rem; font-weight: 600; padding: 0 8px;">Página ${uriState.page} de ${totalPages}</span>
+      <button class="btn-page" ${uriState.page === totalPages ? 'disabled' : ''} onclick="changeUriPage(1)">Siguiente</button>
+    `;
+  }
+
+  window.changeUriPage = function(delta) {
+    uriState.page += delta;
+    renderUriTable();
+  };
+
+  function exportUriCSV() {
+    const filtered = getFilteredUriCases();
+    let csv = '\uFEFFN,Fecha Captura,Hora,Procesado,Tipo Doc,Numero Doc,Delito,Tipo Captura,Medida,Imputacion,Fiscal\n';
+    filtered.forEach(c => {
+      csv += `"${c.num}","${c.fecha_captura}","${c.hora_captura}","${c.procesado}","${c.tipo_documento}","${c.numero_documento}","${c.delito}","${c.tipo_captura}","${c.imposicion_medida}","${c.formulacion_imputacion}","${c.fiscal}"\n`;
+    });
+    downloadBlob(csv, `Reporte_Casos_URI_${new Date().toISOString().substring(0, 10)}.csv`);
+  }
+
+  function downloadBlob(content, filename) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Reporte_Noticias_Militarizacion_${new Date().toISOString().substring(0, 10)}.csv`);
+    link.href = url;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
