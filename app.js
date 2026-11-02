@@ -19,8 +19,6 @@
     fechaFin: '',
     countMode: 'DISTINCT',
     searchQuery: '',
-    delitoQuery: '',
-    barDelitoQuery: '',
     page: 1,
     pageSize: 20
   };
@@ -35,8 +33,6 @@
   let rawUriCases = [];
   let uriState = {
     delito: 'ALL',
-    delitoQuery: '',
-    barDelitoQuery: '',
     tipoCaptura: 'ALL',
     medida: 'ALL',
     imputacion: 'ALL',
@@ -278,25 +274,6 @@
       });
     }
 
-    // Delito text filter
-    const delitoInput = document.getElementById('filterDelitoInput');
-    if (delitoInput) {
-      delitoInput.addEventListener('input', (e) => {
-        noticiasState.delitoQuery = e.target.value.toLowerCase().trim();
-        noticiasState.page = 1;
-        updateNoticiasDashboard();
-      });
-    }
-
-    // Delito bar chart live search
-    const barDelitoInput = document.getElementById('barDelitoSearch');
-    if (barDelitoInput) {
-      barDelitoInput.addEventListener('input', (e) => {
-        noticiasState.barDelitoQuery = e.target.value.toLowerCase().trim();
-        renderNoticiasBarChart(getFilteredNoticias());
-      });
-    }
-
     const searchInput = document.getElementById('tableSearchInput');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
@@ -311,15 +288,11 @@
       btnReset.addEventListener('click', () => {
         noticiasState.municipio = 'ALL';
         noticiasState.tipoNoticia = 'ALL';
-        noticiasState.delitoQuery = '';
-        noticiasState.barDelitoQuery = '';
         noticiasState.searchQuery = '';
         noticiasState.page = 1;
         initNoticiasDateRange();
         if (muniSelect) muniSelect.value = 'ALL';
         if (tipoSelect) tipoSelect.value = 'ALL';
-        if (delitoInput) delitoInput.value = '';
-        if (barDelitoInput) barDelitoInput.value = '';
         if (searchInput) searchInput.value = '';
         updateNoticiasDashboard();
       });
@@ -332,7 +305,6 @@
       if (noticiasState.tipoNoticia !== 'ALL' && r.tipo_noticia !== noticiasState.tipoNoticia) return false;
       if (noticiasState.fechaInicio && r.fecha_dia < noticiasState.fechaInicio) return false;
       if (noticiasState.fechaFin && r.fecha_dia > noticiasState.fechaFin) return false;
-      if (noticiasState.delitoQuery && (!r.delito || !r.delito.toLowerCase().includes(noticiasState.delitoQuery))) return false;
       return true;
     });
   }
@@ -509,12 +481,7 @@
       if (r.delito) counts[r.delito] = (counts[r.delito] || 0) + 1;
     });
 
-    let entries = Object.entries(counts);
-    if (noticiasState.barDelitoQuery) {
-      entries = entries.filter(e => e[0].toLowerCase().includes(noticiasState.barDelitoQuery));
-    }
-
-    const sorted = entries.sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
     const labels = sorted.map(e => e[0].length > 28 ? e[0].substring(0, 26) + '...' : e[0]);
     const dataValues = sorted.map(e => e[1]);
     const totalCount = dataValues.reduce((a, b) => a + b, 0) || 1;
@@ -755,25 +722,6 @@
       });
     }
 
-    // URI Delito text search
-    const uriDelitoInput = document.getElementById('filterUriDelitoInput');
-    if (uriDelitoInput) {
-      uriDelitoInput.addEventListener('input', (e) => {
-        uriState.delitoQuery = e.target.value.toLowerCase().trim();
-        uriState.page = 1;
-        updateUriDashboard();
-      });
-    }
-
-    // URI Delito bar chart live search
-    const barUriDelitoInput = document.getElementById('barUriDelitoSearch');
-    if (barUriDelitoInput) {
-      barUriDelitoInput.addEventListener('input', (e) => {
-        uriState.barDelitoQuery = e.target.value.toLowerCase().trim();
-        renderUriDelitosChart(getFilteredUriCases());
-      });
-    }
-
     const capSelect = document.getElementById('filterUriTipoCaptura');
     if (capSelect) {
       capSelect.addEventListener('change', (e) => {
@@ -814,16 +762,12 @@
     if (btnReset) {
       btnReset.addEventListener('click', () => {
         uriState.delito = 'ALL';
-        uriState.delitoQuery = '';
-        uriState.barDelitoQuery = '';
         uriState.tipoCaptura = 'ALL';
         uriState.medida = 'ALL';
         uriState.imputacion = 'ALL';
         uriState.searchQuery = '';
         uriState.page = 1;
         if (delitoSelect) delitoSelect.value = 'ALL';
-        if (uriDelitoInput) uriDelitoInput.value = '';
-        if (barUriDelitoInput) barUriDelitoInput.value = '';
         if (capSelect) capSelect.value = 'ALL';
         if (medSelect) medSelect.value = 'ALL';
         if (impSelect) impSelect.value = 'ALL';
@@ -836,7 +780,6 @@
   function getFilteredUriCases() {
     return rawUriCases.filter(c => {
       if (uriState.delito !== 'ALL' && c.delito !== uriState.delito) return false;
-      if (uriState.delitoQuery && (!c.delito || !c.delito.toLowerCase().includes(uriState.delitoQuery))) return false;
       if (uriState.tipoCaptura !== 'ALL' && c.tipo_captura !== uriState.tipoCaptura) return false;
       if (uriState.medida !== 'ALL' && c.imposicion_medida !== uriState.medida) return false;
       if (uriState.imputacion !== 'ALL' && c.formulacion_imputacion !== uriState.imputacion) return false;
@@ -968,12 +911,7 @@
       if (c.delito) counts[c.delito] = (counts[c.delito] || 0) + 1;
     });
 
-    let entries = Object.entries(counts);
-    if (uriState.barDelitoQuery) {
-      entries = entries.filter(e => e[0].toLowerCase().includes(uriState.barDelitoQuery));
-    }
-
-    const sorted = entries.sort((a, b) => b[1] - a[1]).slice(0, 7);
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 7);
     const labels = sorted.map(e => e[0].length > 28 ? e[0].substring(0, 26) + '...' : e[0]);
     const values = sorted.map(e => e[1]);
     const total = values.reduce((a, b) => a + b, 0) || 1;

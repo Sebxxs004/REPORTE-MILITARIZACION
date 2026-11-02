@@ -179,11 +179,6 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="filterDelitoInput">Buscar Delito</label>
-            <input type="text" class="form-input" id="filterDelitoInput" placeholder="Ej: Falsedad, Hurto, Estafa...">
-          </div>
-
-          <div class="form-group">
             <label class="form-label" for="countModeSelect">Modo de Conteo</label>
             <select class="form-select" id="countModeSelect">
               <option value="DISTINCT" selected>Noticias Únicas (SPOA)</option>
@@ -222,9 +217,6 @@
                 Distribución de Noticias Creadas por Delito
               </h2>
               <span class="chart-subtitle">Delitos tipificados con mayor número de noticias</span>
-            </div>
-            <div>
-              <input type="text" id="barDelitoSearch" class="form-input" style="padding: 5px 10px; font-size: 0.78rem; width: 170px;" placeholder="Buscar delito...">
             </div>
           </div>
           <div class="chart-container-box">
@@ -355,7 +347,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
           </div>
-          <div class="kpi-title">Total Procesados</div>
+          <div class="kpi-title">Total Procesados (Detenidos)</div>
           <div class="kpi-value-row">
             <span class="kpi-value" id="kpiUriTotalProcesados">45</span>
           </div>
@@ -420,15 +412,10 @@
 
         <div class="filter-controls-grid">
           <div class="form-group">
-            <label class="form-label" for="filterUriDelito">Delito Imputado (Selector)</label>
+            <label class="form-label" for="filterUriDelito">Delito Imputado</label>
             <select class="form-select" id="filterUriDelito">
               <option value="ALL">Todos los Delitos</option>
             </select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="filterUriDelitoInput">Buscar Delito (Texto)</label>
-            <input type="text" class="form-input" id="filterUriDelitoInput" placeholder="Ej: Estupefacientes, Armas, Hurto...">
           </div>
 
           <div class="form-group">
@@ -485,9 +472,6 @@
                 Delitos: Conteo de Procesados por Cada Delito
               </h2>
               <span class="chart-subtitle">Volumen de judicializados desglosado por conducta punible</span>
-            </div>
-            <div>
-              <input type="text" id="barUriDelitoSearch" class="form-input" style="padding: 5px 10px; font-size: 0.78rem; width: 170px;" placeholder="Buscar delito...">
             </div>
           </div>
           <div class="chart-container-box">
