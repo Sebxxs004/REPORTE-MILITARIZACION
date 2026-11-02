@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiscalía General de la Nación - Tablero de Analítica de Noticias Criminales</title>
+  <link rel="stylesheet" href="./styles.css">
+  <!-- Chart.js and XLSX local libraries for offline high reliability -->
+  <script src="./chart.umd.min.js"></script>
+  <script src="./xlsx.full.min.js"></script>
+  <!-- Pre-compiled Dataset -->
+  <script src="./data.js"></script>
+</head>
+<body>
+
+  <!-- Official Government Top Bar -->
+  <header class="gov-top-bar">
+    <div class="gov-top-bar-container">
+      <div class="gov-branding">
+        <img src="./logo.webp" alt="Fiscalía General de la Nación de Colombia" class="gov-logo-img" onerror="this.src='./Fiscalía_General_de_la_Nación_(Colombia)_logo.svg.webp'">
+        <div class="gov-titles">
+          <span class="gov-subtitle">República de Colombia • Fiscalía General de la Nación</span>
+          <h1 class="gov-main-title">Tablero de Analítica: Noticias Criminales Creadas</h1>
+          <span class="gov-section-info">Dirección Seccional Norte de Santander • Monitoreo Militarización</span>
+        </div>
+      </div>
+
+      <div class="gov-header-actions">
+        <div class="gov-badge-live">
+          <span class="live-pulse"></span>
+          Consolidado SPOA
+        </div>
+
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;">
+        <button class="btn-header btn-header-outline" onclick="document.getElementById('excelFileInput').click();" title="Cargar un nuevo archivo Excel de Noticias Creadas">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Actualizar Excel
+        </button>
+
+        <button class="btn-header btn-header-outline" id="btnExportCSV" title="Descargar datos en formato CSV compatible con Excel">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar CSV
+        </button>
+
+        <button class="btn-header btn-header-gold" id="btnPrintReport" title="Imprimir o exportar reporte oficial a PDF">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Imprimir Reporte
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Wrapper -->
+  <main class="dashboard-wrapper">
+
+    <!-- Official Informational Ribbon -->
+    <section class="gov-ribbon">
+      <div class="gov-ribbon-text">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <span id="ribbonSummary">Cargando datos del informe oficial...</span>
+      </div>
+      <div class="gov-ribbon-stats">
+        <span><strong>Fuente:</strong> SPOA - Sistema Penal Oral Acusatorio</span>
+        <span>•</span>
+        <span><strong>Rango Registro:</strong> 29 Oct 2026 – 02 Nov 2026</span>
+      </div>
+    </section>
+
+    <!-- KPI Metric Cards Grid -->
+    <section class="kpi-grid">
+      <!-- Distintivo Primary Metric Card -->
+      <div class="kpi-card kpi-card-distintivo">
+        <div class="kpi-top-row">
+          <span class="kpi-seal-pill">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            Métrica Principal
+          </span>
+          <div class="kpi-icon kpi-icon-gold">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+        </div>
+        <div class="kpi-title">Total Noticias Creadas (Únicas)</div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiTotalDistintivo">0</span>
+        </div>
+        <div class="kpi-subtext">Noticias criminales únicas radicadas en SPOA</div>
+      </div>
+
+      <!-- KPI 2: Total Conductas / Hechos -->
+      <div class="kpi-card">
+        <div class="kpi-top-row">
+          <div class="kpi-title">Conductas / Delitos Tipificados</div>
+          <div class="kpi-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiTotalRegistros">0</span>
+        </div>
+        <div class="kpi-subtext">Total de registros de delitos asociados</div>
+      </div>
+
+      <!-- KPI 3: Departamentos -->
+      <div class="kpi-card">
+        <div class="kpi-top-row">
+          <div class="kpi-title">Departamentos Impactados</div>
+          <div class="kpi-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiDepartamentos">0</span>
+        </div>
+        <div class="kpi-subtext">Jurisdicciones departamentales registradas</div>
+      </div>
+
+      <!-- KPI 4: Municipios -->
+      <div class="kpi-card">
+        <div class="kpi-top-row">
+          <div class="kpi-title">Municipios con Hechos</div>
+          <div class="kpi-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiMunicipios">0</span>
+        </div>
+        <div class="kpi-subtext">Cobertura territorial de los hechos</div>
+      </div>
+
+      <!-- KPI 5: Promedio Diario -->
+      <div class="kpi-card">
+        <div class="kpi-top-row">
+          <div class="kpi-title">Promedio Diario Creación</div>
+          <div class="kpi-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpiPromedioDiario">0</span>
+        </div>
+        <div class="kpi-subtext">Noticias por jornada operativa</div>
+      </div>
+    </section>
+
+    <!-- Interactive Filter Console -->
+    <section class="filter-card">
+      <div class="filter-header">
+        <div class="filter-heading">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <span>Filtros Dinámicos Institucionales</span>
+        </div>
+        <div class="filter-buttons">
+          <button class="btn-reset" id="btnResetFilters">Restablecer Filtros</button>
+        </div>
+      </div>
+
+      <div class="filter-controls-grid">
+        <!-- Filter 1: Departamento de los Hechos -->
+        <div class="form-group">
+          <label class="form-label" for="filterDepartamento">Departamento de los Hechos</label>
+          <select class="form-select" id="filterDepartamento">
+            <option value="ALL">Todos los Departamentos</option>
+          </select>
+        </div>
+
+        <!-- Filter 2: Tipo de Noticia -->
+        <div class="form-group">
+          <label class="form-label" for="filterTipo">Tipo de Noticia</label>
+          <select class="form-select" id="filterTipo">
+            <option value="ALL">Todos los Tipos de Noticia</option>
+          </select>
+        </div>
+
+        <!-- Filter 3: Fecha Inicio -->
+        <div class="form-group">
+          <label class="form-label" for="filterFechaInicio">Fecha Creación Desde</label>
+          <input type="date" class="form-input" id="filterFechaInicio">
+        </div>
+
+        <!-- Filter 4: Fecha Fin -->
+        <div class="form-group">
+          <label class="form-label" for="filterFechaFin">Fecha Creación Hasta</label>
+          <input type="date" class="form-input" id="filterFechaFin">
+        </div>
+
+        <!-- Filter 5: Count Mode -->
+        <div class="form-group">
+          <label class="form-label" for="countModeSelect">Modo de Conteo</label>
+          <select class="form-select" id="countModeSelect">
+            <option value="DISTINCT" selected>Noticias Únicas (SPOA)</option>
+            <option value="TOTAL">Total Conductas / Delitos</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Active Filters Summary Row -->
+      <div class="active-filters-row" id="activeFiltersContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Main Visualizations Grid -->
+    <section class="charts-grid">
+      <!-- Chart 1: Line Chart (Creación de Noticias por Día) -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-titles">
+            <h2 class="chart-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Evolución Temporal: Creación de Noticias por Día
+            </h2>
+            <span class="chart-subtitle">Volumen diario de noticias según fechas registradas en el formato</span>
+          </div>
+        </div>
+        <div class="chart-container-box">
+          <canvas id="lineChartCreacion"></canvas>
+        </div>
+      </div>
+
+      <!-- Chart 2: Bar Chart (Distribución de Noticias Creadas) -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-titles">
+            <h2 class="chart-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              Distribución de Noticias Creadas
+            </h2>
+            <span class="chart-subtitle">Comparativa con datos y porcentajes exactos</span>
+          </div>
+          <div class="chart-tab-group">
+            <button class="chart-tab-btn bar-tab-btn active" data-tab="TIPO">Por Tipo</button>
+            <button class="chart-tab-btn bar-tab-btn" data-tab="MUNICIPIO">Por Municipio</button>
+            <button class="chart-tab-btn bar-tab-btn" data-tab="DELITO">Top Delitos</button>
+          </div>
+        </div>
+        <div class="chart-container-box">
+          <canvas id="barChartNoticias"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Secondary Visualizations Grid -->
+    <section class="secondary-analytics-grid">
+      <!-- Donut Chart: Tipo de Noticia -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-titles">
+            <h2 class="chart-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10h-10z"/></svg>
+              Composición Porcentual: Tipo de Noticia
+            </h2>
+            <span class="chart-subtitle">Participación proporcional de denuncias, querellas y actos urgentes</span>
+          </div>
+        </div>
+        <div class="chart-container-box" style="height: 280px;">
+          <canvas id="donutChartTipo"></canvas>
+        </div>
+      </div>
+
+      <!-- Institutional Quick Highlights Card -->
+      <div class="chart-card" style="justify-content: flex-start; gap: 14px;">
+        <div class="chart-card-header">
+          <div class="chart-titles">
+            <h2 class="chart-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Resumen Operativo y Jurisdiccional
+            </h2>
+            <span class="chart-subtitle">Puntos clave del reporte consolidado</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem; color: #334155;">
+          <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #0b2545;">
+            <strong style="color: #0b2545;">Pico de Mayor Radicación:</strong>
+            El 29 de octubre de 2026 registró el mayor volumen con <strong>209 noticias únicas</strong> creadas (360 registros totales).
+          </div>
+          <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #c59b27;">
+            <strong style="color: #0b2545;">Concentración Territorial:</strong>
+            El departamento de <strong>Norte de Santander</strong> concentra más del 97% de los hechos registrados, liderado por la ciudad de <strong>Cúcuta</strong> y el área metropolitana (Villa del Rosario, Los Patios).
+          </div>
+          <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border-left: 4px solid #134074;">
+            <strong style="color: #0b2545;">Tipología Predominante:</strong>
+            La modalidad más frecuente de inicio es la <strong>Denuncia</strong> (42.5%), seguida de la <strong>Querella</strong> (34.7%) y los <strong>Actos Urgentes</strong> (17.2%).
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Detailed Interactive Data Table -->
+    <section class="table-card">
+      <div class="table-header-controls">
+        <div class="chart-titles">
+          <h2 class="chart-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Registro Detallado de Noticias Criminales
+          </h2>
+          <span class="chart-subtitle" id="tableCountInfo">Mostrando noticias filtradas</span>
+        </div>
+
+        <div class="table-search-box">
+          <span class="search-icon-inside">🔍</span>
+          <input type="text" class="form-input" id="tableSearchInput" placeholder="Buscar por SPOA, Delito, Municipio...">
+        </div>
+      </div>
+
+      <div class="table-scroll-container">
+        <table class="gov-table">
+          <thead>
+            <tr>
+              <th>N° Noticia Criminal (SPOA)</th>
+              <th>Fecha Creación</th>
+              <th>Tipo Noticia</th>
+              <th>Departamento</th>
+              <th>Municipio</th>
+              <th>Delito(s)</th>
+              <th>Estado</th>
+              <th style="text-align: right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tableNoticiasBody">
+            <!-- Table rows populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="pagination-bar">
+        <span>Visualizando 20 registros por página</span>
+        <div class="pagination-controls" id="paginationControls">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Technical Notice Detail Modal -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3>Ficha Técnica de Noticia Criminal</h3>
+          <span>SPOA: <strong id="modalNoticiaId">-</strong></span>
+        </div>
+        <button class="btn-close-modal" id="modalCloseBtn">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Tipo de Noticia</span>
+          <div class="modal-detail-val" id="modalTipo">-</div>
+        </div>
+
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Fecha de Creación Noticia</span>
+          <div class="modal-detail-val" id="modalFechaCreacion">-</div>
+        </div>
+
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Fecha Denuncia</span>
+          <div class="modal-detail-val" id="modalFechaDenuncia">-</div>
+        </div>
+
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Fecha de los Hechos</span>
+          <div class="modal-detail-val" id="modalFechaHechos">-</div>
+        </div>
+
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Departamento de los Hechos</span>
+          <div class="modal-detail-val" id="modalDepartamento">-</div>
+        </div>
+
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Municipio de los Hechos</span>
+          <div class="modal-detail-val" id="modalMunicipio">-</div>
+        </div>
+
+        <div class="modal-detail-item full-width">
+          <span class="modal-detail-label">Dirección / Lugar de los Hechos</span>
+          <div class="modal-detail-val" id="modalDireccion">-</div>
+        </div>
+
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Barrio / Sector</span>
+          <div class="modal-detail-val" id="modalBarrio">-</div>
+        </div>
+
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Despacho Asignado</span>
+          <div class="modal-detail-val" id="modalDespacho">-</div>
+        </div>
+
+        <div class="modal-detail-item full-width">
+          <span class="modal-detail-label">Unidad Receptora</span>
+          <div class="modal-detail-val" id="modalUnidad">-</div>
+        </div>
+
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Funcionario Receptor</span>
+          <div class="modal-detail-val" id="modalReceptor">-</div>
+        </div>
+
+        <div class="modal-detail-item">
+          <span class="modal-detail-label">Seccional</span>
+          <div class="modal-detail-val" id="modalSeccional">-</div>
+        </div>
+
+        <div class="modal-detail-item full-width">
+          <span class="modal-detail-label">Delitos Tipificados en el Formato</span>
+          <ul id="modalDelitosList" style="padding-left: 20px; font-size: 0.86rem; color: #0b2545; margin-top: 5px;">
+            <!-- Delitos list populated dynamically -->
+          </ul>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="document.getElementById('detailModal').classList.remove('active')">Cerrar Ficha</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Official Footer -->
+  <footer class="gov-footer">
+    <div class="gov-footer-content">
+      <div>
+        <strong>Fiscalía General de la Nación de Colombia</strong><br>
+        Sistema Penal Oral Acusatorio (SPOA) • Monitoreo Analítico Institucional
+      </div>
+      <div>
+        Reporte generado con base en <em>Noticias creadas militarizacion.xlsx</em>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script src="./app.js"></script>
+</body>
+</html>
