@@ -124,6 +124,60 @@ body {
   flex-wrap: wrap;
 }
 
+/* Module Navigation Tabs in Header */
+.gov-module-nav {
+  display: flex;
+  align-items: center;
+  background: rgba(6, 26, 49, 0.6);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(197, 155, 39, 0.35);
+  gap: 4px;
+}
+
+.nav-module-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-module-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-module-btn.active {
+  background: var(--accent-gold);
+  color: #0b2545;
+  box-shadow: 0 2px 6px rgba(197, 155, 39, 0.4);
+}
+
+.dashboard-module {
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeInModule 0.25s ease-in-out forwards;
+}
+
+.dashboard-module.active {
+  display: flex;
+}
+
+@keyframes fadeInModule {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .gov-badge-live {
   display: inline-flex;
   align-items: center;
@@ -516,6 +570,24 @@ body {
 
 @media (max-width: 1080px) {
   .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.charts-grid-tri {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1150px) {
+  .charts-grid-tri {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .charts-grid-tri {
     grid-template-columns: 1fr;
   }
 }
