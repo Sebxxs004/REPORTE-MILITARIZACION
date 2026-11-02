@@ -86,10 +86,25 @@
         <div class="kpi-subtext">Noticias criminales únicas radicadas en SPOA</div>
       </div>
 
-      <!-- KPI 2: Total Conductas / Hechos -->
+      <!-- KPI 2: Delito con Mayor Número de Noticias (Dinámica) -->
+      <div class="kpi-card" style="border-left: 4px solid var(--accent-gold);">
+        <div class="kpi-top-row">
+          <div class="kpi-title">Delito con Mayor N° de Noticias</div>
+          <div class="kpi-icon" style="background-color: var(--accent-gold-light); color: var(--warning);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+        </div>
+        <div class="kpi-value-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+          <span class="kpi-value" id="kpiTopDelitoCount" style="font-size: 1.8rem; color: #b45309;">0</span>
+          <span id="kpiTopDelitoName" style="font-size: 0.82rem; font-weight: 700; color: #0b2545; line-height: 1.25; min-height: 34px;">-</span>
+        </div>
+        <div class="kpi-subtext">Mayor incidencia según filtro aplicado</div>
+      </div>
+
+      <!-- KPI 3: Total Conductas / Hechos -->
       <div class="kpi-card">
         <div class="kpi-top-row">
-          <div class="kpi-title">Conductas / Delitos Tipificados</div>
+          <div class="kpi-title">Conductas / Delitos Totales</div>
           <div class="kpi-icon">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
           </div>
@@ -97,21 +112,7 @@
         <div class="kpi-value-row">
           <span class="kpi-value" id="kpiTotalRegistros">0</span>
         </div>
-        <div class="kpi-subtext">Total de registros de delitos asociados</div>
-      </div>
-
-      <!-- KPI 3: Departamentos -->
-      <div class="kpi-card">
-        <div class="kpi-top-row">
-          <div class="kpi-title">Departamentos Impactados</div>
-          <div class="kpi-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-          </div>
-        </div>
-        <div class="kpi-value-row">
-          <span class="kpi-value" id="kpiDepartamentos">0</span>
-        </div>
-        <div class="kpi-subtext">Jurisdicciones departamentales registradas</div>
+        <div class="kpi-subtext">Total de registros de delitos tipificados</div>
       </div>
 
       <!-- KPI 4: Municipios -->
@@ -156,11 +157,11 @@
       </div>
 
       <div class="filter-controls-grid">
-        <!-- Filter 1: Departamento de los Hechos -->
+        <!-- Filter 1: Municipio de los Hechos (UPDATED) -->
         <div class="form-group">
-          <label class="form-label" for="filterDepartamento">Departamento de los Hechos</label>
-          <select class="form-select" id="filterDepartamento">
-            <option value="ALL">Todos los Departamentos</option>
+          <label class="form-label" for="filterMunicipio">Municipio de los Hechos</label>
+          <select class="form-select" id="filterMunicipio">
+            <option value="ALL">Todos los Municipios</option>
           </select>
         </div>
 
@@ -218,20 +219,15 @@
         </div>
       </div>
 
-      <!-- Chart 2: Bar Chart (Distribución de Noticias Creadas) -->
+      <!-- Chart 2: Bar Chart (Distribución de Noticias Creadas por Delito) -->
       <div class="chart-card">
         <div class="chart-card-header">
           <div class="chart-titles">
             <h2 class="chart-title">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              Distribución de Noticias Creadas
+              Distribución de Noticias Creadas por Delito
             </h2>
-            <span class="chart-subtitle">Comparativa con datos y porcentajes exactos</span>
-          </div>
-          <div class="chart-tab-group">
-            <button class="chart-tab-btn bar-tab-btn active" data-tab="TIPO">Por Tipo</button>
-            <button class="chart-tab-btn bar-tab-btn" data-tab="MUNICIPIO">Por Municipio</button>
-            <button class="chart-tab-btn bar-tab-btn" data-tab="DELITO">Top Delitos</button>
+            <span class="chart-subtitle">Delitos tipificados con mayor número de noticias</span>
           </div>
         </div>
         <div class="chart-container-box">

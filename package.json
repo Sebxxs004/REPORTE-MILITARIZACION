@@ -2,11 +2,6 @@
   "name": "reporte-militarizacion-fiscalia",
   "version": "1.0.0",
   "description": "Tablero de Analítica Institucional - Fiscalía General de la Nación",
-  "main": "index.html",
-  "scripts": {
-    "start": "python -m http.server 8080",
-    "build": "echo 'Build OK'"
-  },
   "keywords": [
     "fiscalia",
     "colombia",

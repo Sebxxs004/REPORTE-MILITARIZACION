@@ -9,13 +9,12 @@
   let uniqueNoticias = [];
   
   let state = {
-    departamento: 'ALL',
+    municipio: 'ALL',
     tipoNoticia: 'ALL',
     fechaInicio: '',
     fechaFin: '',
     countMode: 'DISTINCT', // 'DISTINCT' (Noticias Únicas) or 'TOTAL' (Total Hechos)
     searchQuery: '',
-    barTab: 'TIPO', // 'TIPO', 'MUNICIPIO', 'DELITO'
     page: 1,
     pageSize: 20
   };
@@ -25,7 +24,7 @@
   let barChartInstance = null;
   let donutChartInstance = null;
 
-  // Custom Chart.js Plugin to draw value labels above bars & line points
+  // Custom Chart.js Plugin to draw value labels directly on bars & line points
   const datalabelsPlugin = {
     id: 'datalabelsPlugin',
     afterDatasetsDraw(chart) {
@@ -44,20 +43,16 @@
           ctx.save();
           ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
           ctx.fillStyle = '#0b2545';
-          ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
 
           if (chartType === 'line') {
-            // Draw value above line point
-            ctx.fillStyle = '#0b2545';
+            ctx.textAlign = 'center';
             ctx.fillText(val, element.x, element.y - 14);
           } else if (chartType === 'bar') {
             if (isHorizontal) {
-              // Draw value to the right of horizontal bar
               ctx.textAlign = 'left';
               ctx.fillText(` ${val}`, element.x + 6, element.y);
             } else {
-              // Draw value on top of vertical column
               ctx.textAlign = 'center';
               ctx.fillText(val, element.x, element.y - 10);
             }
@@ -68,7 +63,6 @@
     }
   };
 
-  // Register plugin globally if Chart is available
   if (typeof Chart !== 'undefined') {
     Chart.register(datalabelsPlugin);
   }
@@ -87,7 +81,7 @@
       populateFilterOptions();
       updateDashboard();
     } else {
-      console.warn('Dataset precompilado no encontrado. Esperando carga de archivo.');
+      console.warn('Dataset precompilado no encontrado.');
     }
   }
 
@@ -105,16 +99,16 @@
   }
 
   function populateFilterOptions() {
-    // Populate Departamentos
-    const deptSelect = document.getElementById('filterDepartamento');
-    if (deptSelect) {
-      const depts = [...new Set(rawRecords.map(r => r.departamento_hechos).filter(Boolean))].sort();
-      deptSelect.innerHTML = '<option value="ALL">Todos los Departamentos</option>';
-      depts.forEach(d => {
+    // Populate Municipios de los Hechos (Reemplaza Departamento)
+    const muniSelect = document.getElementById('filterMunicipio');
+    if (muniSelect) {
+      const munis = [...new Set(rawRecords.map(r => r.municipio_hechos).filter(Boolean))].sort();
+      muniSelect.innerHTML = '<option value="ALL">Todos los Municipios</option>';
+      munis.forEach(m => {
         const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        deptSelect.appendChild(opt);
+        opt.value = m;
+        opt.textContent = m;
+        muniSelect.appendChild(opt);
       });
     }
 
@@ -133,11 +127,11 @@
   }
 
   function setupEventListeners() {
-    // Filter Departamentos
-    const deptSelect = document.getElementById('filterDepartamento');
-    if (deptSelect) {
-      deptSelect.addEventListener('change', (e) => {
-        state.departamento = e.target.value;
+    // Filter Municipio
+    const muniSelect = document.getElementById('filterMunicipio');
+    if (muniSelect) {
+      muniSelect.addEventListener('change', (e) => {
+        state.municipio = e.target.value;
         state.page = 1;
         updateDashboard();
       });
@@ -195,28 +189,17 @@
     const btnReset = document.getElementById('btnResetFilters');
     if (btnReset) {
       btnReset.addEventListener('click', () => {
-        state.departamento = 'ALL';
+        state.municipio = 'ALL';
         state.tipoNoticia = 'ALL';
         state.searchQuery = '';
         state.page = 1;
         initDateRange();
-        if (deptSelect) deptSelect.value = 'ALL';
+        if (muniSelect) muniSelect.value = 'ALL';
         if (tipoSelect) tipoSelect.value = 'ALL';
         if (searchInput) searchInput.value = '';
         updateDashboard();
       });
     }
-
-    // Bar tabs (Tipo, Municipio, Delito)
-    const barTabs = document.querySelectorAll('.bar-tab-btn');
-    barTabs.forEach(btn => {
-      btn.addEventListener('click', () => {
-        barTabs.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.barTab = btn.getAttribute('data-tab');
-        renderBarChart();
-      });
-    });
 
     // Excel upload handler
     const fileInput = document.getElementById('excelFileInput');
@@ -250,7 +233,7 @@
   // Filter evaluation logic
   function getFilteredRecords() {
     return rawRecords.filter(r => {
-      if (state.departamento !== 'ALL' && r.departamento_hechos !== state.departamento) {
+      if (state.municipio !== 'ALL' && r.municipio_hechos !== state.municipio) {
         return false;
       }
       if (state.tipoNoticia !== 'ALL' && r.tipo_noticia !== state.tipoNoticia) {
@@ -324,17 +307,40 @@
       kpiDistintivoEl.textContent = totalDistintivo.toLocaleString('es-CO');
     }
 
+    // DELITO CON MAYOR NÚMERO DE NOTICIAS (Depende dinámicamente de los filtros)
+    const delitoCounts = {};
+    filteredRecords.forEach(r => {
+      if (r.delito) {
+        delitoCounts[r.delito] = (delitoCounts[r.delito] || 0) + 1;
+      }
+    });
+
+    let topDelitoName = 'SIN DATO';
+    let topDelitoCount = 0;
+    for (const [delito, count] of Object.entries(delitoCounts)) {
+      if (count > topDelitoCount) {
+        topDelitoCount = count;
+        topDelitoName = delito;
+      }
+    }
+
+    const kpiTopDelitoCountEl = document.getElementById('kpiTopDelitoCount');
+    const kpiTopDelitoNameEl = document.getElementById('kpiTopDelitoName');
+    if (kpiTopDelitoCountEl && kpiTopDelitoNameEl) {
+      if (topDelitoCount > 0) {
+        kpiTopDelitoCountEl.textContent = `${topDelitoCount} noticias`;
+        kpiTopDelitoNameEl.textContent = topDelitoName;
+        kpiTopDelitoNameEl.title = topDelitoName;
+      } else {
+        kpiTopDelitoCountEl.textContent = '0';
+        kpiTopDelitoNameEl.textContent = 'Sin datos coincidentes';
+      }
+    }
+
     // Total Records
     const kpiTotalEl = document.getElementById('kpiTotalRegistros');
     if (kpiTotalEl) {
       kpiTotalEl.textContent = totalRegistros.toLocaleString('es-CO');
-    }
-
-    // Unique Departamentos
-    const uniqueDepts = new Set(filteredRecords.map(r => r.departamento_hechos).filter(Boolean));
-    const kpiDeptsEl = document.getElementById('kpiDepartamentos');
-    if (kpiDeptsEl) {
-      kpiDeptsEl.textContent = uniqueDepts.size;
     }
 
     // Unique Municipios
@@ -355,7 +361,7 @@
     // Ribbon subtitle
     const ribbonText = document.getElementById('ribbonSummary');
     if (ribbonText) {
-      ribbonText.innerHTML = `Mostrando <strong>${totalDistintivo}</strong> noticias únicas creadas y <strong>${totalRegistros}</strong> hechos punibles tipificados.`;
+      ribbonText.innerHTML = `Mostrando <strong>${totalDistintivo}</strong> noticias únicas y <strong>${totalRegistros}</strong> hechos punibles tipificados.`;
     }
   }
 
@@ -365,8 +371,8 @@
     if (!container) return;
 
     const badges = [];
-    if (state.departamento !== 'ALL') {
-      badges.push(`<span>Dpto: <strong>${state.departamento}</strong></span>`);
+    if (state.municipio !== 'ALL') {
+      badges.push(`<span>Municipio: <strong>${state.municipio}</strong></span>`);
     }
     if (state.tipoNoticia !== 'ALL') {
       badges.push(`<span>Tipo: <strong>${state.tipoNoticia}</strong></span>`);
@@ -379,7 +385,7 @@
     if (badges.length > 0) {
       container.innerHTML = badges.map(b => `<div class="active-filter-pill">${b}</div>`).join('');
     } else {
-      container.innerHTML = '<span style="font-size: 0.75rem; color: #94a3b8;">Sin filtros específicos aplicados (Mostrando consolidado total)</span>';
+      container.innerHTML = '<span style="font-size: 0.75rem; color: #94a3b8;">Sin filtros específicos aplicados (Consolidado general)</span>';
     }
   }
 
@@ -391,11 +397,9 @@
     records = records || getFilteredRecords();
     noticias = noticias || getFilteredDistinctNoticias(records);
 
-    // Group by Date
     const dateCounts = {};
     const datasetToUse = state.countMode === 'DISTINCT' ? noticias : records;
 
-    // Fixed complete date sequence from the format
     const allKnownDays = ['2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02'];
     allKnownDays.forEach(day => {
       dateCounts[day] = 0;
@@ -408,7 +412,6 @@
       }
     });
 
-    // Filter by selected range
     const filteredDays = allKnownDays.filter(day => {
       if (state.fechaInicio && day < state.fechaInicio) return false;
       if (state.fechaFin && day > state.fechaFin) return false;
@@ -417,7 +420,6 @@
 
     const dataValues = filteredDays.map(d => dateCounts[d] || 0);
 
-    // Format human Spanish labels
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     const displayLabels = filteredDays.map(l => {
       const parts = l.split('-');
@@ -431,7 +433,6 @@
 
     const metricTitle = state.countMode === 'DISTINCT' ? 'Noticias Creadas (SPOA Únicas)' : 'Total Conductas / Delitos';
 
-    // Create gradient
     const chartContext = ctx.getContext('2d');
     const gradient = chartContext.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, 'rgba(19, 64, 116, 0.28)');
@@ -492,7 +493,7 @@
           x: {
             grid: { color: 'rgba(226, 232, 240, 0.8)' },
             ticks: {
-              autoSkip: false, // Ensure Oct 31 and all days are ALWAYS displayed!
+              autoSkip: false,
               color: '#1e293b',
               font: { size: 12, weight: '700' }
             }
@@ -514,93 +515,61 @@
     });
   }
 
-  // Render Bar Chart (Distribución de Noticias Creadas)
+  // Render Bar Chart: EXCLUSIVAMENTE DE DELITOS
   function renderBarChart(records, noticias) {
     const ctx = document.getElementById('barChartNoticias');
     if (!ctx) return;
 
     records = records || getFilteredRecords();
-    noticias = noticias || getFilteredDistinctNoticias(records);
 
+    // Group only by Delito
     const counts = {};
-    const datasetToUse = state.countMode === 'DISTINCT' ? noticias : records;
+    records.forEach(r => {
+      const val = r.delito || 'SIN DATO';
+      counts[val] = (counts[val] || 0) + 1;
+    });
 
-    if (state.barTab === 'TIPO') {
-      // Clean canonical naming
-      datasetToUse.forEach(r => {
-        let val = r.tipo_noticia || 'SIN DATO';
-        counts[val] = (counts[val] || 0) + 1;
-      });
-    } else if (state.barTab === 'MUNICIPIO') {
-      datasetToUse.forEach(r => {
-        const val = r.municipio_hechos || 'SIN DATO';
-        counts[val] = (counts[val] || 0) + 1;
-      });
-    } else if (state.barTab === 'DELITO') {
-      records.forEach(r => {
-        const val = r.delito || 'SIN DATO';
-        counts[val] = (counts[val] || 0) + 1;
-      });
-    }
-
-    // Sort descending
+    // Top 8 Delitos descending
     const sortedEntries = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1]);
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
 
-    const isTipoTab = state.barTab === 'TIPO';
-    const limit = isTipoTab ? 6 : 8;
-    const topEntries = sortedEntries.slice(0, limit);
-
-    // Format human labels
-    const labels = topEntries.map(e => {
-      if (isTipoTab) {
-        // Pretty title format
-        if (e[0] === 'DENUNCIA') return 'Denuncia';
-        if (e[0] === 'QUERELLA') return 'Querella';
-        if (e[0] === 'ACTOS URGENTES') return 'Actos Urgentes';
-        if (e[0] === 'COMPULSACION DE COPIAS') return 'Compulsación';
-        if (e[0].includes('OFICIO')) return 'De Oficio';
-        return e[0];
-      }
-      if (e[0].length > 25) return e[0].substring(0, 23) + '...';
+    const labels = sortedEntries.map(e => {
+      if (e[0].length > 28) return e[0].substring(0, 26) + '...';
       return e[0];
     });
 
-    const dataValues = topEntries.map(e => e[1]);
+    const dataValues = sortedEntries.map(e => e[1]);
     const totalCount = dataValues.reduce((a, b) => a + b, 0) || 1;
 
     if (barChartInstance) {
       barChartInstance.destroy();
     }
 
-    // Curated governmental palette
-    const colorPalette = isTipoTab 
-      ? ['#0b2545', '#1d4ed8', '#c59b27', '#059669', '#7c3aed', '#64748b']
-      : ['#0b2545', '#134074', '#1d4ed8', '#0284c7', '#c59b27', '#d97706', '#059669', '#64748b'];
-
-    // For TIPO: Vertical columns look infinitely better and balanced!
-    // For MUNICIPIO and DELITO: Horizontal bars accommodate long names.
-    const isHorizontal = !isTipoTab;
+    const govColors = [
+      '#0b2545', '#134074', '#1d4ed8', '#0284c7',
+      '#c59b27', '#d97706', '#059669', '#475569'
+    ];
 
     barChartInstance = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
         datasets: [{
-          label: state.countMode === 'DISTINCT' ? 'Noticias Creadas' : 'Registros',
+          label: 'Noticias / Registros por Delito',
           data: dataValues,
-          backgroundColor: colorPalette.slice(0, labels.length),
-          borderRadius: isHorizontal ? 6 : { topLeft: 8, topRight: 8 },
-          maxBarThickness: isHorizontal ? 26 : 55,
+          backgroundColor: govColors.slice(0, labels.length),
+          borderRadius: 6,
+          maxBarThickness: 24,
           borderSkipped: false
         }]
       },
       options: {
-        indexAxis: isHorizontal ? 'y' : 'x',
+        indexAxis: 'y', // Horizontal bars for clean readability of crime names
         responsive: true,
         maintainAspectRatio: false,
         layout: {
-          padding: { top: 22, right: 30, left: 10, bottom: 5 }
+          padding: { top: 15, right: 35, left: 5, bottom: 5 }
         },
         plugins: {
           legend: { display: false },
@@ -613,12 +582,11 @@
             callbacks: {
               title: function(items) {
                 const idx = items[0].dataIndex;
-                return topEntries[idx][0];
+                return sortedEntries[idx][0];
               },
               label: function(context) {
-                const val = isHorizontal ? context.parsed.x : context.parsed.y;
-                const percent = ((val / totalCount) * 100).toFixed(1);
-                return ` ${val} noticias creadas (${percent}%)`;
+                const percent = ((context.parsed.x / totalCount) * 100).toFixed(1);
+                return ` ${context.parsed.x} noticias (${percent}%)`;
               }
             }
           }
@@ -628,25 +596,19 @@
             beginAtZero: true,
             grid: {
               color: 'rgba(226, 232, 240, 0.8)',
-              borderDash: isHorizontal ? [3, 3] : []
+              borderDash: [3, 3]
             },
             ticks: {
-              color: '#334155',
-              font: { size: 11, weight: '600' },
+              color: '#475569',
+              font: { size: 11 },
               precision: 0
             }
           },
           y: {
-            beginAtZero: true,
-            grid: {
-              display: !isHorizontal,
-              color: 'rgba(226, 232, 240, 0.8)',
-              borderDash: [3, 3]
-            },
+            grid: { display: false },
             ticks: {
               color: '#0f172a',
-              font: { size: 11, weight: '600' },
-              precision: 0
+              font: { size: 11, weight: '600' }
             }
           }
         }
@@ -730,7 +692,6 @@
     records = records || getFilteredRecords();
     noticias = noticias || getFilteredDistinctNoticias(records);
 
-    // Filter by search query if any
     let tableItems = noticias;
     if (state.searchQuery) {
       const q = state.searchQuery;
@@ -754,7 +715,6 @@
     const startIdx = (state.page - 1) * state.pageSize;
     const pageItems = tableItems.slice(startIdx, startIdx + state.pageSize);
 
-    // Update count labels
     const countInfo = document.getElementById('tableCountInfo');
     if (countInfo) {
       countInfo.textContent = `Mostrando ${totalItems === 0 ? 0 : startIdx + 1} - ${Math.min(startIdx + state.pageSize, totalItems)} de ${totalItems} noticias`;
@@ -793,7 +753,6 @@
       `;
     }).join('');
 
-    // Attach click events to "Ver Ficha" buttons
     tbody.querySelectorAll('.btn-view-detail').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -843,7 +802,6 @@
     }
   }
 
-  // Show Notice Detail Modal
   function showNoticeDetail(noticiaId) {
     const noticeRecords = rawRecords.filter(r => r.id === noticiaId);
     if (!noticeRecords || noticeRecords.length === 0) return;
@@ -866,7 +824,6 @@
     document.getElementById('modalReceptor').textContent = base.receptor || 'SIN DATO';
     document.getElementById('modalSeccional').textContent = base.seccional || 'SIN DATO';
 
-    // Delitos list
     const delitosList = noticeRecords.map(r => r.delito).filter(Boolean);
     const uniqueDelitos = [...new Set(delitosList)];
     document.getElementById('modalDelitosList').innerHTML = uniqueDelitos.map(d => `<li style="margin-bottom: 4px;"><strong>${d}</strong></li>`).join('');
@@ -874,7 +831,6 @@
     modal.classList.add('active');
   }
 
-  // Excel upload handler
   function handleExcelUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -893,7 +849,6 @@
           return;
         }
 
-        // Parse new records dynamically
         const newRecords = [];
         json.forEach(row => {
           const getCol = (patterns) => {
@@ -950,12 +905,11 @@
     reader.readAsArrayBuffer(file);
   }
 
-  // Export filtered table to CSV
   function exportToCSV() {
     const filteredRecords = getFilteredRecords();
     const filteredNoticias = getFilteredDistinctNoticias(filteredRecords);
 
-    let csvContent = '\uFEFF'; // UTF-8 BOM
+    let csvContent = '\uFEFF';
     csvContent += 'Numero Noticia Criminal,Fecha Creacion,Tipo Noticia,Departamento Hechos,Municipio Hechos,Delito Principal,Total Delitos,Despacho,Funcionario Receptor\n';
 
     filteredNoticias.forEach(n => {
